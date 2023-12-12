@@ -1,0 +1,12 @@
+# A basic docker compose file for running the current version of plejd-mqtt-ha
+
+version: "3.8"
+services:
+  plejd:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./config/:/config/
+    network_mode: host
+    privileged: true

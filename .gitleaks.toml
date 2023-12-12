@@ -1,0 +1,6 @@
+[allowlist]
+# Plejd API key is not a secret, but detected so by gitleaks
+description = "Plejd API key"
+regexes = [
+'''zHtVqXt8k4yFyk2QGmgp48D9xZr2G94xWYnF4dak'''
+]

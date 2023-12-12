@@ -1,0 +1,242 @@
+# Copyright 2023 Viktor Karlquist <vkarlqui@gmail.com>
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""Main plejd module.
+
+Responsible for starting loading settings, performing health checks and creating devices.
+"""
+
+import asyncio
+import logging
+import os
+import sys
+import time
+
+import yaml
+from plejd_mqtt_ha.bt_client import BTClient
+from plejd_mqtt_ha.mdl.combined_device import (
+    BTDeviceError,
+    CombinedDevice,
+    CombinedLight,
+    MQTTDeviceError,
+)
+from plejd_mqtt_ha.mdl.settings import PlejdSettings
+from plejd_mqtt_ha.mdl.site import PlejdSite
+from plejd_mqtt_ha.plejd_api import IncorrectCredentialsError, PlejdAPI, PlejdAPIError
+from pydantic import ValidationError
+
+
+def start(config: str) -> None:
+    """Start the Plejd service.
+
+    This function will never return unless program exits, for whatever reason.
+
+    Parameters
+    ----------
+    config : str
+        Path to the config file
+    """
+    logging.basicConfig(level=logging.INFO)
+    try:
+        asyncio.run(_run(config))
+    except Exception as ex:
+        logging.critical("Unhandled exception occured, exiting")
+        logging.critical(ex)
+        sys.exit()
+    finally:
+        pass  # TODO: Cleanup
+
+
+async def _run(config: str) -> None:
+    """Entry point for starting and running the program.
+
+    Parameters
+    ----------
+    config : str
+        Path to the config file
+    """
+    try:
+        with open(config, "r") as file:
+            settings_yaml = yaml.safe_load(file)
+
+        plejd_settings = PlejdSettings.parse_obj(settings_yaml)
+    except FileNotFoundError:
+        logging.critical("The settings.yaml file was not found.")
+        return
+    except yaml.YAMLError:
+        logging.critical("There was an error parsing the settings.yaml file.")
+        return
+    except ValidationError as e:
+        logging.critical(
+            f"There was an error parsing the settings into a PlejdSettings object: {e}"
+        )
+        return
+
+    logging.info("Loaded Plejd settings..       [OK]")
+
+    try:
+        plejd_site = await _load_plejd_site(plejd_settings)
+    except IncorrectCredentialsError as err:
+        logging.critical(str(err))
+        return  # exit program if incorrect credentials
+
+    logging.info("Plejd site loaded..           [OK]")
+
+    plejd_bt_client = await _create_bt_client(plejd_site.crypto_key, plejd_settings)
+
+    logging.info("Created Plejd BT client..     [OK]")
+    discovered_devices = await _create_devices(plejd_settings, plejd_bt_client, plejd_site)
+    if len(discovered_devices) <= 0:  # No devices created
+        logging.critical("Failed to create Plejd devices, exiting")
+        return
+    logging.info(f"Created {len(discovered_devices)} Plejd devices.. [OK]")
+
+    heartbeat_task = asyncio.create_task(
+        write_health_data(plejd_settings, discovered_devices)
+    )  # Create heartbeat task
+
+    await heartbeat_task  # Wait indefinitely for the heartbeat task
+
+
+async def write_health_data(
+    plejd_settings: PlejdSettings, discovered_devices: list[CombinedDevice]
+) -> None:
+    """Write health data to files.
+
+    Will continously write health data to files in the health_check_dir. This is used by the docker
+    healthcheck script.
+
+    Parameters
+    ----------
+    plejd_settings : PlejdSettings
+        Settings
+    discovered_devices : list[CombinedDevice]
+        List of discovered devices
+    """
+    first_device = discovered_devices[0]  # Get first device
+    bt_client = first_device._plejd_bt_client  # Get BT client
+    mqtt_client = first_device._mqtt_device.mqtt_client  # Get MQTT client
+
+    # Write bluetooth health check file
+    bt_health_check_file = plejd_settings.health_check_dir + plejd_settings.health_check_bt_file
+    mqtt_health_check_file = plejd_settings.health_check_dir + plejd_settings.health_check_mqtt_file
+    heartbeat_file = plejd_settings.health_check_dir + plejd_settings.health_check_hearbeat_file
+
+    while True:  # Run forever
+        # Retrieve status of BT and MQTT clients
+        if bt_client.is_connected() and await bt_client.ping():
+            bt_status = "connected"
+        else:
+            bt_status = "disconnected"
+        if mqtt_client.is_connected():
+            mqtt_status = "connected"
+        else:
+            mqtt_status = "disconnected"
+
+        try:
+            if plejd_settings.health_check:
+                if not os.path.exists(plejd_settings.health_check_dir):
+                    os.makedirs(plejd_settings.health_check_dir)
+                # Indicate that the program is running
+                with open(heartbeat_file, "w") as f:
+                    f.write(str(time.time()))
+                # Indicate that we are connected to Plejd bluetooth mesh
+                with open(bt_health_check_file, "w") as f:
+                    f.write(bt_status)
+                # Indicate that we are connected to broker
+                with open(mqtt_health_check_file, "w") as f:
+                    f.write(mqtt_status)
+            else:
+                pass  # Do nothing if health check is disabled
+        except (IOError, FileNotFoundError) as e:
+            logging.error(f"Error writing to healthcheck file: {e}")
+        finally:
+            await asyncio.sleep(plejd_settings.health_check_interval)
+
+
+async def _load_plejd_site(settings: PlejdSettings) -> PlejdSite:
+    # Load Plejd site from API, retry until success, or exit if credentials are incorrect
+    api = PlejdAPI(settings)
+
+    try:
+        plejd_site = api.get_site()
+    except IncorrectCredentialsError:
+        logging.critical("Failed to login to Plejd API, incorrect credentials in settings.json")
+        raise
+    except PlejdAPIError as err:  # Any other error, retry forever
+        logging.error(f"Failed to retreive Plejd site: {str(err)})")
+
+        async def _api_retry_loop() -> PlejdSite:
+            logging.info("Entering Plejd API retry loop")
+            while True:
+                try:
+                    return api.get_site()
+                except PlejdAPIError as err:
+                    logging.error(f"Failed to login to Plejd API: {str(err)})")
+                    await asyncio.sleep(10)  # TODO: HC value, add backoff?
+
+        plejd_site = await _api_retry_loop()  # retry until success
+
+    logging.debug("Successfully logged in to Plejd API")
+
+    return plejd_site
+
+
+async def _create_bt_client(crypto_key: str, settings: PlejdSettings) -> BTClient:
+    # Create Plejd BT client, retry until success
+
+    bt_client = BTClient(crypto_key, settings)
+    stay_connected = True
+
+    if not await bt_client.connect(stay_connected):
+
+        async def _bt_retry_loop() -> None:
+            logging.info("Entering Plejd BT retry loop")
+            while True:
+                if await bt_client.connect(stay_connected):
+                    return
+                await asyncio.sleep(10)  # TODO: HC value, add backoff?
+
+        await _bt_retry_loop()
+
+    return bt_client
+
+
+async def _create_devices(
+    settings: PlejdSettings, bt_client: BTClient, plejd_site: PlejdSite
+) -> list[CombinedDevice]:
+    # Create every device connected to the Plejd Account
+
+    combined_devices = []
+    for device in plejd_site.devices:
+        logging.info(f"Creating device {device.name}")
+        if device.category == "light":  # TODO HC for now
+            combined_device = CombinedLight(
+                bt_client=bt_client, settings=settings, device_info=device
+            )
+            try:
+                await combined_device.start()
+                combined_devices.append(combined_device)
+            except MQTTDeviceError as err:
+                logging.warning(
+                    f"Skipping device {device.name}, cant create MQTT device: {str(err)}"
+                )
+                continue
+            except BTDeviceError as err:
+                logging.warning(f"Skipping device {device.name}, cant create BT device: {str(err)}")
+                continue
+        else:
+            logging.warning(f"{device.category} not supported")
+            continue
+    return combined_devices

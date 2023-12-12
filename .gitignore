@@ -1,0 +1,9 @@
+/config
+*.pkl
+__pycache__
+.vscode
+build
+dist
+*.egg-info
+.venv
+megalinter-reports/

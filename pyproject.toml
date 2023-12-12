@@ -1,0 +1,50 @@
+[tool.poetry]
+name = "plejd-mqtt-ha"
+version = "0.0.1"
+description = ""
+authors = ["Viktor Karlquist <vkarlqui@gmail.com>"]
+readme = "README.md"
+packages = [{include = "plejd_mqtt_ha"}]
+
+[tool.poetry.dependencies]
+python = ">=3.11.0,<3.13"           # Bleak requires version < 3.13
+paho-mqtt = "^1.6.1"                # MQTT library
+ha-mqtt-discoverable = "^0.12.0"    # Create MQTT entities that are discovered by HA
+bleak = "^0.21.1"                   # BLE library
+requests = "^2.31.0"                # To communicate with plejd API
+tomli = "^2.0.1"                    # TOML parser to store plejd site
+numpy = "^1.25.2"                   # To parse BLE payload, could probably be done without numpy
+cryptography = "^41.0.5"            # Used to create AES cipher to authenticate against plejd mesh
+pydantic = "^1.10.13"               # Data validation
+
+[tool.poetry.group.dev.dependencies]
+mypy = "^1.5.1"                     # Type checking
+pylint = "^2.17.5"                  # Linting
+pycodestyle = "^2.11.0"             # Code style
+pytest = "^7.4.3"                   # Tests
+
+[tool.pylint.format]
+max-line-length = 100
+
+[tool.flake8]
+max-line-length = 100
+
+[tool.black]
+line-length = 100
+
+[tool.pylint.'MESSAGES CONTROL']
+disable="fixme"
+
+[tool.pylint.MASTER]
+ignore="tools"
+
+[tool.mypy]
+warn_return_any = true
+warn_unused_configs = true
+
+[tool.poetry.group.test.dependencies]
+pytest-mock = "^3.6.1"
+pytest-asyncio = "^0.23.2"
+
+[tool.pytest.ini_options]
+testpaths = "tests"

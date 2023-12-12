@@ -1,0 +1,8 @@
+plejd/tests/*
+__pycache__
+.vscode
+build
+dist
+*.egg-info
+.venv
+megalinter-reports/
