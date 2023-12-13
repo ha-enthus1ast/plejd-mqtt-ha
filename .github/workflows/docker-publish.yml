@@ -1,9 +1,8 @@
 name: Publish Docker image
 
 on:
-  push:
-    branches:
-      - feature/docker-auto-publish
+    release:
+      types: [published]
 
 jobs:
   push_to_registry:
@@ -23,5 +22,5 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           context: .
-          push: false
-          tags: vkaqyu/plejd-mqtt-ha:${{ github.sha }}
+          push: true
+          tags: vkaqyu/plejd-mqtt-ha:${{ github.ref }}
