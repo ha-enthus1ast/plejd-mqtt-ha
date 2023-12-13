@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "plejd-mqtt-ha"
-version = "0.0.4"
+version = "0.0.5"
 description = ""
 authors = ["Viktor Karlquist <vkarlqui@gmail.com>"]
 readme = "README.md"
@@ -41,6 +41,7 @@ ignore="tools"
 [tool.mypy]
 warn_return_any = true
 warn_unused_configs = true
+
 
 
 
