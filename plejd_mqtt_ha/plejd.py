@@ -19,11 +19,13 @@ Responsible for starting loading settings, performing health checks and creating
 
 import asyncio
 import logging
+import logging.handlers
 import os
 import sys
 import time
 
 import yaml
+from plejd_mqtt_ha import constants
 from plejd_mqtt_ha.bt_client import BTClient
 from plejd_mqtt_ha.mdl.combined_device import (
     BTDeviceError,
@@ -37,7 +39,7 @@ from plejd_mqtt_ha.plejd_api import IncorrectCredentialsError, PlejdAPI, PlejdAP
 from pydantic import ValidationError
 
 
-def start(config: str) -> None:
+def start(config: str, log_level: str, log_file: str) -> None:
     """Start the Plejd service.
 
     This function will never return unless program exits, for whatever reason.
@@ -46,10 +48,13 @@ def start(config: str) -> None:
     ----------
     config : str
         Path to the config file
+    log_level : str
+        Log level to use
+    log_file : str
+        Path to the log file
     """
-    logging.basicConfig(level=logging.INFO)
     try:
-        asyncio.run(_run(config))
+        asyncio.run(_run(config, log_level, log_file))
     except Exception as ex:
         logging.critical("Unhandled exception occured, exiting")
         logging.critical(ex)
@@ -58,14 +63,41 @@ def start(config: str) -> None:
         pass  # TODO: Cleanup
 
 
-async def _run(config: str) -> None:
+async def _run(config: str, log_level: str, log_file: str) -> None:
     """Entry point for starting and running the program.
 
     Parameters
     ----------
     config : str
         Path to the config file
+    log_level : str
+        Log level to use
+    log_file : str
+        Path to the log file
+
+    Raises
+    ------
+    ValueError
+        If invalid log level is provided
     """
+    numeric_level = getattr(logging, log_level.upper(), None)
+    if not isinstance(numeric_level, int):
+        raise ValueError(f"Invalid log level: {log_level}")
+
+    # Create dir for log file if it does not exist yet
+    log_dir = os.path.dirname(log_file)
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
+
+    handler = logging.handlers.RotatingFileHandler(
+        filename=log_file,
+        maxBytes=constants.LOG_FILE_SIZE,  # 1 MB
+        backupCount=constants.LOG_FILE_COUNT,  # 3 files
+    )
+    logging.basicConfig(
+        level=numeric_level, format="%(asctime)s %(levelname)-8s %(message)s", handlers=[handler]
+    )
+
     try:
         with open(config, "r") as file:
             settings_yaml = yaml.safe_load(file)

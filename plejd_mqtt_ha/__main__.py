@@ -14,7 +14,7 @@
 
 """Main module."""
 
-import argparse
+import os
 import sys
 
 from plejd_mqtt_ha import plejd
@@ -22,14 +22,13 @@ from plejd_mqtt_ha import plejd
 
 def main():
     """Entry point of the application."""
-    parser = argparse.ArgumentParser(description="Run plejd-mqtt-ha")
-    parser.add_argument(
-        "-c", "--config", type=str, help="Path to the configuration file", default="/config"
-    )
 
-    args = parser.parse_args()
+    # Load environment variables
+    log_level = os.getenv("LOG_LEVEL", "ERROR").upper()
+    config = os.getenv("CONFIG", "/config/settings.yaml")
+    log_file = os.getenv("LOG_FILE", "/config/logs/plejd.log")
 
-    sys.exit(plejd.start(args.config))
+    sys.exit(plejd.start(config=config, log_level=log_level, log_file=log_file))
 
 
 if __name__ == "__main__":

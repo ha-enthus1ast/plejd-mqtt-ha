@@ -1,8 +1,10 @@
 FROM python:3.11 as base
 
-ENV SETTINGS_DIR=/config \
-    SETTINGS_FILE=settings.yaml \
-    WORKDIR=/app
+ENV WORKDIR=/app \
+    CONFIG=/config/settings.yaml \
+    LOG_LEVEL=ERROR \
+    LOG_FILE=/config/logs/plejd.log \
+    LOG_FILE_HC=/config/logs/healthcheck.log
 
 RUN apt-get update \
   && apt-get --no-install-recommends install -y bluez=5.66-1 bluetooth=5.66-1 \
@@ -50,7 +52,7 @@ RUN ./.venv/bin/pip install "$WORKDIR"/*.whl
 # Healthcheck
 COPY healthcheck.py $WORKDIR/healthcheck.py
 HEALTHCHECK --interval=1m --timeout=1s \
-  CMD python $WORKDIR/healthcheck.py --config $SETTINGS_DIR/$SETTINGS_FILE || exit 1
+  CMD su plejd -c "python healthcheck.py" || exit 1
 
 # Set the entrypoint
 ENTRYPOINT ["./docker-entrypoint.sh"]
