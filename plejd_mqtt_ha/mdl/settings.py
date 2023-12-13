@@ -56,18 +56,35 @@ class API(BaseModel):
 
 
 class MQTT(BaseModel):
-    """Settings related to MQTT broker."""
+    """Settings related to MQTT broker.
+
+    Settings are equivalent to the ones used by ha-mqtt-discovery. See
+    https://github.com/unixorn/ha-mqtt-discoverable
+    """
 
     host: str = "localhost"
-    """Address of the host MQTT broker"""
-    port: int = 1883
-    """Port of the MQTT host"""
-    user: Optional[str] = None
-    """MQTT user name"""
+    """MQTT broker host"""
+    port: Optional[int] = 1883
+    """MQTT broker port"""
+    username: Optional[str] = None
+    """MQTT broker username"""
     password: Optional[str] = None
-    """Password of the MQTT user"""
-    ha_discovery_prefix: str = "homeassistant"
-    """Home assistant discovery prefix"""
+    """MQTT broker password"""
+    client_name: Optional[str] = None
+    """MQTT client name"""
+    use_tls: Optional[bool] = False
+    """Whether or not to use TLS"""
+    tls_key: Optional[str] = None
+    """TLS key file"""
+    tls_certfile: Optional[str] = None
+    """TLS certificate file"""
+    tls_ca_cert: Optional[str] = None
+    """TLS CA certificate file"""
+
+    discovery_prefix: str = "homeassistant"
+    """The root of the topic tree where HA is listening for messages"""
+    state_prefix: str = "hmd"
+    """The root of the topic tree ha-mqtt-discovery publishes its state messages"""
 
 
 class BLE(BaseModel):
