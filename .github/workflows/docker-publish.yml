@@ -22,5 +22,5 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           context: .
-          push: true
-          tags: vkaqyu/plejd-mqtt-ha:${{ github.ref }}
+          push: false
+          tags: vkaqyu/plejd-mqtt-ha:${{ github.ref }},vkaqyu/plejd-mqtt-ha:latest
