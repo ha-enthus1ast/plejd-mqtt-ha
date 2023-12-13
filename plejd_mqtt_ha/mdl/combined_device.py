@@ -186,7 +186,10 @@ class CombinedLight(CombinedDevice[BTLightInfo]):
     def _create_mqtt_device(self) -> Subscriber[BTLightInfo]:
         # Override
         mqtt_device_info = DeviceInfo(
-            name=self._device_info.name, identifiers=self._device_info.unique_id
+            name=self._device_info.name,
+            identifiers=self._device_info.unique_id,
+            manufacturer="Plejd",
+            model=self._device_info.model,
         )
         supported_color_modes = None
         if self._device_info.brightness:
@@ -201,7 +204,9 @@ class CombinedLight(CombinedDevice[BTLightInfo]):
             device=mqtt_device_info,
         )
         settings = Settings(mqtt=self._settings.mqtt, entity=mqtt_light_info)
-        return Light(settings=settings, command_callback=self._mqtt_callback)
+        light = Light(settings=settings, command_callback=self._mqtt_callback)
+        light.off()  # Publish initial state to register with HA
+        return light
 
     async def _create_bt_device(self) -> BTDevice:
         # Override
