@@ -13,12 +13,14 @@
 # limitations under the License.
 """Healthcheck program used to check if plejd-mqtt is running."""
 
-import argparse
 import logging
+import logging.handlers
+import os
 import sys
 import time
 
 import yaml
+from plejd_mqtt_ha import constants
 from plejd_mqtt_ha.mdl.settings import PlejdSettings
 from pydantic import ValidationError
 
@@ -162,25 +164,35 @@ def main() -> int:
     ValueError
         If invalid log level is provided
     """
-    parser = argparse.ArgumentParser(description="Healthcheck program")
-    parser.add_argument("--loglevel", type=str, help="Set log level", default="ERROR")
-    parser.add_argument(
-        "-c", "--config", type=str, help="Path to the configuration file", default="/config"
-    )
-    args = parser.parse_args()
+    # Load environment variables
+    log_level = os.getenv("LOG_LEVEL", "ERROR").upper()
+    config = os.getenv("CONFIG", "/config/settings.yaml")
+    log_file = os.getenv("LOG_FILE_HC", "/config/logs/healthcheck.log")
 
-    numeric_level = getattr(logging, args.loglevel.upper(), None)
+    numeric_level = getattr(logging, log_level.upper(), None)
     if not isinstance(numeric_level, int):
-        raise ValueError(f"Invalid log level: {args.loglevel}")
+        raise ValueError(f"Invalid log level: {log_level}")
 
-    logging.basicConfig(level=numeric_level, format="%(asctime)s %(levelname)s %(message)s")
+    # Create dir for log file if it does not exist yet
+    log_dir = os.path.dirname(log_file)
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
+
+    handler = logging.handlers.RotatingFileHandler(
+        filename=log_file,
+        maxBytes=constants.LOG_FILE_SIZE,  # 1 MB
+        backupCount=constants.LOG_FILE_COUNT,  # 3 files
+    )
+    logging.basicConfig(
+        level=numeric_level, format="%(asctime)s %(levelname)-8s %(message)s", handlers=[handler]
+    )
 
     logging.info("Starting healthcheck")
 
     logging.info("Loading settings")
 
     try:
-        with open(args.config, "r") as file:
+        with open(config, "r") as file:
             settings_yaml = yaml.safe_load(file)
 
         plejd_settings = PlejdSettings.parse_obj(settings_yaml)

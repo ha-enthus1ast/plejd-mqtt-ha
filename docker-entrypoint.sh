@@ -25,5 +25,5 @@ hciconfig hci0 down
 hciconfig hci0 up
 
 echo -e "Starting plejd"
-su plejd -c "python -m plejd_mqtt_ha --config $SETTINGS_DIR/$SETTINGS_FILE"
+su plejd -c "python -m plejd_mqtt_ha"
 #tail -f /dev/null
