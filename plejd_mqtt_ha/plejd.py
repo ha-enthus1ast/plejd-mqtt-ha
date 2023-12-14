@@ -171,10 +171,13 @@ async def _update_plejd_time(
                     await bt_client.set_plejd_time(ble_address, current_sys_time)
                     logging.info(f"Updated Plejd time using device {device._device_info.name}")
                 else:
-                    logging.info("Plejd time is already up to date")
+                    logging.info(
+                        f"Used device {device._device_info.name} to tell Plejd time is already up"
+                        "to date"
+                    )
             except PlejdBluetoothError as err:
                 logging.error(
-                    f"Error {err} updating Plejd time using device {device._device_info.name},"
+                    f"Error {err} updating Plejd time using device {device._device_info.name}, "
                     "trying next device"
                 )
                 continue
