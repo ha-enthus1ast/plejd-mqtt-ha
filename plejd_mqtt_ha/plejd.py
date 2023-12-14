@@ -18,6 +18,7 @@ Responsible for starting loading settings, performing health checks and creating
 """
 
 import asyncio
+import datetime
 import logging
 import logging.handlers
 import os
@@ -26,7 +27,7 @@ import time
 
 import yaml
 from plejd_mqtt_ha import constants
-from plejd_mqtt_ha.bt_client import BTClient
+from plejd_mqtt_ha.bt_client import BTClient, PlejdBluetoothError
 from plejd_mqtt_ha.mdl.combined_device import (
     BTDeviceError,
     CombinedDevice,
@@ -134,11 +135,54 @@ async def _run(config: str, log_level: str, log_file: str) -> None:
         return
     logging.info(f"Created {len(discovered_devices)} Plejd devices.. [OK]")
 
-    heartbeat_task = asyncio.create_task(
-        write_health_data(plejd_settings, discovered_devices)
-    )  # Create heartbeat task
+    heartbeat_task = asyncio.create_task(write_health_data(plejd_settings, discovered_devices))
+    update_time_task = asyncio.create_task(_update_plejd_time(plejd_settings, discovered_devices))
 
-    await heartbeat_task  # Wait indefinitely for the heartbeat task
+    await asyncio.gather(heartbeat_task, update_time_task)  # Wait indefinitely for the tasks
+
+
+async def _update_plejd_time(
+    plejd_settings: PlejdSettings, discovered_devices: list[CombinedDevice]
+) -> None:
+    """Update Plejd time continously.
+
+    Parameters
+    ----------
+    plejd_settings : PlejdSettings
+        Settings
+    discovered_devices : list[CombinedDevice]
+        List of discovered devices
+    """
+    bt_client = discovered_devices[0]._plejd_bt_client
+    while True:  # Run forever
+        for device in discovered_devices:
+            try:
+                ble_address = device._device_info.ble_address
+                current_plejd_time = await bt_client.get_plejd_time(ble_address)
+
+                if plejd_settings.time_use_sys_time:
+                    current_sys_time = datetime.datetime.now()
+                else:
+                    current_sys_time = None  # TODO: not implemented
+
+                if abs(current_plejd_time - current_sys_time) > datetime.timedelta(
+                    seconds=plejd_settings.time_update_interval
+                ):
+                    await bt_client.set_plejd_time(ble_address, current_sys_time)
+                    logging.info(f"Updated Plejd time using device {device._device_info.name}")
+                else:
+                    logging.info(
+                        f"Used device {device._device_info.name} to tell Plejd time is already up"
+                        "to date"
+                    )
+            except PlejdBluetoothError as err:
+                logging.error(
+                    f"Error {err} updating Plejd time using device {device._device_info.name}, "
+                    "trying next device"
+                )
+                continue
+
+            await asyncio.sleep(plejd_settings.time_update_interval)
 
 
 async def write_health_data(
