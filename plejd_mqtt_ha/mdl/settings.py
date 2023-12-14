@@ -126,7 +126,7 @@ class PlejdSettings(BaseModel):
     health_check_hearbeat_file: str = "heartbeat"
     """File name for heartbeat file"""
 
-    time_update_interval: float = 60.0
+    time_update_interval: float = 60.0 * 60.0  # 1 hour
     """Interval in seconds between updating Plejd time"""
     time_update_threshold: float = 10.0
     """Time difference in seconds between Plejd time and local time before updating Plejd time"""
