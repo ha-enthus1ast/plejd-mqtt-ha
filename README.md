@@ -132,14 +132,17 @@ Configuration of the application. See example configuration [here](#example).
 
 ### General
 
-| Parameter                                | Description                                     | Default     |
-|------------------------------------------|-------------------------------------------------|-------------|
-| `health_check` (Optional)                | Enable health check                             | True        |
-| `health_check_interval` (Optional)       | Interval in seconds between health check writes | 60.0        |
-| `health_check_dir` (Optional)            | Directory to store health check files           | "~/.plejd/" |
-| `health_check_bt_file` (Optional)        | File name for Bluetooth health check            | "bluetooth" |
-| `health_check_mqtt_file` (Optional)      | File name for MQTT health check                 | "mqtt"      |
-| `health_check_heartbeat_file` (Optional) | File name for heartbeat file                    | "heartbeat" |
+| Parameter                                | Description                                                                             | Default     |
+|------------------------------------------|-----------------------------------------------------------------------------------------|-------------|
+| `health_check` (Optional)                | Enable health check                                                                     | True        |
+| `health_check_interval` (Optional)       | Interval in seconds between health check writes                                         | 60.0        |
+| `health_check_dir` (Optional)            | Directory to store health check files                                                   | "~/.plejd/" |
+| `health_check_bt_file` (Optional)        | File name for Bluetooth health check                                                    | "bluetooth" |
+| `health_check_mqtt_file` (Optional)      | File name for MQTT health check                                                         | "mqtt"      |
+| `health_check_heartbeat_file` (Optional) | File name for heartbeat file                                                            | "heartbeat" |
+| `time_update_interval` (Optional)        | Interval in seconds between updating Plejd time                                         | 3600.0      |
+| `time_update_threshold` (Optional)       | Time difference in seconds between Plejd time and local time before updating Plejd time | 10.0        |
+| `time_use_sys_time` (Optional)           | Whether or not to use system time instead of NTP time **NOT USED YET!**                 | True        |
 
 ### API
 
@@ -155,13 +158,19 @@ Configuration of the application. See example configuration [here](#example).
 
 ### MQTT
 
-| Parameter                        | Description                     | Default         |
-|----------------------------------|---------------------------------|-----------------|
-| `host` (Optional)                | Address of the host MQTT broker | "localhost"     |
-| `port` (Optional)                | Port of the MQTT host           | 1883            |
-| `user` (Optional)                | MQTT user name                  | None            |
-| `password` (Optional)            | Password of the MQTT user       | None            |
-| `ha_discovery_prefix` (Optional) | Home assistant discovery prefix | "homeassistant" |
+| Parameter                     | Description                                                               | Default         |
+|-------------------------------|---------------------------------------------------------------------------|-----------------|
+| `host` (Optional)             | MQTT broker host                                                          | "localhost"     |
+| `port` (Optional)             | MQTT broker port                                                          | 1883            |
+| `username` (Optional)         | MQTT broker username                                                      | None            |
+| `password` (Optional)         | MQTT broker password                                                      | None            |
+| `client_name` (Optional)      | MQTT client name                                                          | None            |
+| `use_tls` (Optional)          | Whether or not to use TLS                                                 | False           |
+| `tls_key` (Optional)          | TLS key file                                                              | None            |
+| `tls_certfile` (Optional)     | TLS certificate file                                                      | None            |
+| `tls_ca_cert` (Optional)      | TLS CA certificate file                                                   | None            |
+| `discovery_prefix` (Optional) | The root of the topic tree where HA is listening for messages             | "homeassistant" |
+| `state_prefix` (Optional)     | The root of the topic tree ha-mqtt-discovery publishes its state messages | "hmd"           |
 
 ### BLE
 
