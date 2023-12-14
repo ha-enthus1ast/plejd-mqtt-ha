@@ -260,18 +260,18 @@ class TestBTClient:
 
         if expected_exception:
             with pytest.raises(expected_exception):
-                await self.bt_client.get_plejd_time(self.bt_device)
+                await self.bt_client.get_plejd_time(self.bt_device.ble_address)
         else:
-            result = await self.bt_client.get_plejd_time(self.bt_device)
+            result = await self.bt_client.get_plejd_time(self.bt_device.ble_address)
             assert result == expected_result
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
         "send_command_success, expected_exception, expected_result",
         [
-            (False, PlejdNotConnectedError, False),  # Not connected
-            (False, PlejdBluetoothError, False),  # send_command failed
-            (True, None, True),  # Successful case
+            (False, PlejdNotConnectedError(""), False),  # Not connected
+            (False, PlejdBluetoothError(""), False),  # send_command failed
+            (False, None, None),  # Successful case
         ],
     )
     async def test_set_plejd_time(
@@ -282,16 +282,14 @@ class TestBTClient:
         time = datetime.datetime.now()
         timestamp = struct.pack("<I", int(time.timestamp())) + b"\x00"
         self.bt_client.send_command = mocker.AsyncMock(
-            side_effect=expected_exception("send_command failed")
-            if not send_command_success
-            else None
+            side_effect=expected_exception if not send_command_success else None
         )
 
         if expected_exception:
-            with pytest.raises(expected_exception):
-                await self.bt_client.set_plejd_time(self.bt_device, time)
+            with pytest.raises(type(expected_exception)):
+                await self.bt_client.set_plejd_time(self.bt_device.ble_address, time)
         else:
-            result = await self.bt_client.set_plejd_time(self.bt_device, time)
+            result = await self.bt_client.set_plejd_time(self.bt_device.ble_address, time)
             assert result == expected_result
             self.bt_client.send_command.assert_called_once_with(
                 self.bt_device.ble_address,

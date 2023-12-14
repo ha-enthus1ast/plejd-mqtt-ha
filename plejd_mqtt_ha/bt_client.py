@@ -33,7 +33,6 @@ from bleak.exc import BleakDBusError, BleakError
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from plejd_mqtt_ha import constants
-from plejd_mqtt_ha.mdl.bt_device_info import BTDeviceInfo
 from plejd_mqtt_ha.mdl.settings import PlejdSettings
 
 
@@ -298,18 +297,17 @@ class BTClient:
         encoded_address = self._encode_address(self._client.address)
         return self._encrypt_decrypt_data(self._crypto_key, encoded_address, encrypted_data)
 
-    async def get_plejd_time(self, plejd_device: BTDeviceInfo) -> Optional[datetime]:
+    async def get_plejd_time(self, ble_address: int) -> datetime:
         """Request time from plejd mesh.
 
         Parameters
         ----------
-        plejd_device : PlejdDevice
-            Plejd device to get time from, can be any device in the mesh. Does not really matter
-            which one.
+        ble_address : int
+            Address of the device to request time from
 
         Returns
         -------
-        Optional[datetime]
+        datetime
             Returns the time in datetime format
         """
         if not self.is_connected():
@@ -318,15 +316,18 @@ class BTClient:
             raise PlejdNotConnectedError(error_message)
 
         try:
-            # Request time
-            await self.send_command(
-                plejd_device.ble_address,
-                constants.PlejdCommand.BLE_CMD_TIME_UPDATE.value,
-                "",
-                constants.PlejdResponse.BLE_REQUEST_RESPONSE.value,
-            )
-            # Read respone
-            last_data = await self.get_last_data()
+            # Requires atomic operation, otherwise we might miss the response
+            lock = asyncio.Lock()
+            async with lock:
+                # Request time
+                await self.send_command(
+                    ble_address,
+                    constants.PlejdCommand.BLE_CMD_TIME_UPDATE.value,
+                    "",
+                    constants.PlejdResponse.BLE_REQUEST_RESPONSE.value,
+                )
+                # Read respone
+                last_data = await self.get_last_data()
         except (PlejdBluetoothError, PlejdNotConnectedError, PlejdTimeoutError):
             logging.error("Failed to read time from Plejd mesh, when calling get_last_data")
             raise
@@ -338,35 +339,39 @@ class BTClient:
         ):
             logging.warning(
                 "Failed to read time from Plejd mesh, using device: %s",
-                plejd_device.name,
+                ble_address,
             )
             raise UnsupportedCommandError("Received unknown command")
+
+        # Check that last_data is long enough
+        if len(last_data) < 9:
+            logging.error("Buffer is too short to unpack time")
+            raise PlejdBluetoothError("Buffer is too short to unpack time")
 
         # Convert from unix timestamp
         plejd_time = datetime.fromtimestamp(struct.unpack_from("<I", last_data, 5)[0])
 
         return plejd_time
 
-    async def set_plejd_time(self, plejd_device: BTDeviceInfo, time: datetime) -> bool:
+    async def set_plejd_time(self, ble_address: int, time: datetime) -> None:
         """Set time in plejd mesh.
 
         Parameters
         ----------
-        plejd_device : PlejdDevice
-            Plejd device to use to set time, can be any device in the mesh. Does not really matter
-            which one.
+        ble_address : int
+            Address of the device to set time in
         time : datetime
             Time to set in datetime format
 
-        Returns
-        -------
-        bool
-            Boolean status of the operation
+        Raises
+        ------
+        PlejdBluetoothError
+            If an error occurs when sending the command to the mesh
         """
         timestamp = struct.pack("<I", int(time.timestamp())) + b"\x00"
         try:
             await self.send_command(
-                plejd_device.ble_address,
+                ble_address,
                 constants.PlejdCommand.BLE_CMD_TIME_UPDATE.value,
                 timestamp.hex(),
                 constants.PlejdResponse.BLE_REQUEST_NO_RESPONSE.value,
@@ -377,7 +382,6 @@ class BTClient:
             raise
 
         logging.debug("Successfully set plejd time to: %s", time)
-        return True
 
     async def _connect(self) -> bool:
         self._disconnect = False
