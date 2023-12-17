@@ -55,6 +55,9 @@ class PlejdCommand(int, Enum):
     BLE_CMD_TIME_UPDATE = 0x001B
     BLE_CMD_REMOTE_CLICK = 0x0016
 
+    BLE_CMD_UNKNOWN_1 = 0x0  # TODO: Seems to be sent when button down is pressed
+    BLE_CMD_UNKNOWN_2 = 0x1011  # TODO: Seems to be sent sometimes(?) when a button is pressed
+
 
 class PlejdLightAction(str, Enum):
     """BLE payload for possible actions on a light."""

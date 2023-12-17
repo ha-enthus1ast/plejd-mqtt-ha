@@ -23,12 +23,22 @@ import logging
 from typing import Generic, Optional, TypeVar
 
 from ha_mqtt_discoverable import DeviceInfo, Discoverable, Settings
-from ha_mqtt_discoverable.sensors import Light, LightInfo, Subscriber
+from ha_mqtt_discoverable.sensors import (
+    DeviceTrigger,
+    DeviceTriggerInfo,
+    Light,
+    LightInfo,
+    Subscriber,
+)
 from paho.mqtt.client import Client, MQTTMessage
 from plejd_mqtt_ha.bt_client import BTClient, PlejdNotConnectedError
-from plejd_mqtt_ha.mdl.bt_data_type import BTLightData
-from plejd_mqtt_ha.mdl.bt_device import BTDevice, BTLight
-from plejd_mqtt_ha.mdl.bt_device_info import BTDeviceInfo, BTLightInfo
+from plejd_mqtt_ha.mdl.bt_data_type import BTDeviceTriggerData, BTLightData
+from plejd_mqtt_ha.mdl.bt_device import BTDevice, BTDeviceTrigger, BTLight
+from plejd_mqtt_ha.mdl.bt_device_info import (
+    BTDeviceInfo,
+    BTDeviceTriggerInfo,
+    BTLightInfo,
+)
 from plejd_mqtt_ha.mdl.settings import PlejdSettings
 
 PlejdDeviceTypeT = TypeVar("PlejdDeviceTypeT", bound=BTDeviceInfo)
@@ -86,7 +96,7 @@ class CombinedDevice(Generic[PlejdDeviceTypeT]):
         self._settings = settings
         self._plejd_bt_client = bt_client
         self._event_loop = asyncio.get_event_loop()
-        self._mqtt_device = None
+        self._mqtt_entities = None
         self._bt_device: Optional[BTDevice] = None
 
     async def start(self) -> None:
@@ -95,7 +105,7 @@ class CombinedDevice(Generic[PlejdDeviceTypeT]):
         This will register it with HA and connect it to the physical device.
         """
         try:
-            self._mqtt_device = self._create_mqtt_device()
+            self._mqtt_entities = self._create_mqtt_device()
         except ConnectionError as err:
             error_msg = f"Failed to connect to MQTT broker for {self._device_info.name}"
             logging.error(error_msg)
@@ -112,15 +122,15 @@ class CombinedDevice(Generic[PlejdDeviceTypeT]):
             logging.error(error_msg)
             raise BTDeviceError(error_msg) from err
 
-    def _create_mqtt_device(self) -> Subscriber[PlejdDeviceTypeT]:
+    def _create_mqtt_device(self) -> list[Subscriber[PlejdDeviceTypeT]]:
         """Create an MQTT device, shall be overriden in all subclasses.
 
         If a callbac is needed, use the _mqtt_callback function.
 
         Returns
         -------
-        Any
-            The created MQTT device
+        list[Subscriber[PlejdDeviceTypeT]]
+            List of MQTT entities
 
         Raises
         ------
@@ -183,7 +193,7 @@ class CombinedDevice(Generic[PlejdDeviceTypeT]):
 class CombinedLight(CombinedDevice[BTLightInfo]):
     """A combined Plejd BT and MQTT light."""
 
-    def _create_mqtt_device(self) -> Subscriber[BTLightInfo]:
+    def _create_mqtt_device(self) -> list[Subscriber[BTLightInfo]]:
         # Override
         mqtt_device_info = DeviceInfo(
             name=self._device_info.name,
@@ -206,7 +216,7 @@ class CombinedLight(CombinedDevice[BTLightInfo]):
         settings = Settings(mqtt=self._settings.mqtt, entity=mqtt_light_info)
         light = Light(settings=settings, command_callback=self._mqtt_callback)
         light.off()  # Publish initial state to register with HA
-        return light
+        return [light]
 
     async def _create_bt_device(self) -> BTDevice:
         # Override
@@ -225,6 +235,7 @@ class CombinedLight(CombinedDevice[BTLightInfo]):
     def _mqtt_callback(self, client: Client, user_data, message: MQTTMessage) -> None:
         # Override
         payload = json.loads(message.payload.decode())
+        mqtt_entity = self._mqtt_entities[0]
         if not self._bt_device:
             logging.info(f"BT device {self._device_info.name} not created yet")
             return
@@ -232,24 +243,115 @@ class CombinedLight(CombinedDevice[BTLightInfo]):
             if asyncio.run_coroutine_threadsafe(
                 self._bt_device.brightness(payload["brightness"]), loop=self._event_loop
             ):
-                self._mqtt_device.brightness(payload["brightness"])  # TODO generics?
+                mqtt_entity.brightness(payload["brightness"])  # TODO generics?
         elif "state" in payload:
             if payload["state"] == "ON":
                 if asyncio.run_coroutine_threadsafe(self._bt_device.on(), loop=self._event_loop):
-                    self._mqtt_device.on()
+                    mqtt_entity.on()
             else:
                 if asyncio.run_coroutine_threadsafe(self._bt_device.off(), loop=self._event_loop):
-                    self._mqtt_device.off()
+                    mqtt_entity.off()
         else:
             logging.warning(f"Unknown payload {payload}")
 
     def _bt_callback(self, light_response: BTLightData) -> None:
         # Override
-        if not self._mqtt_device:
+        if not light_response:
+            return
+
+        if not self._mqtt_entities:
             logging.info(f"MQTT device {self._device_info.name} not created yet")
             return
 
+        mqtt_entity = self._mqtt_entities[0]  # Only one can exist
+
         if light_response.state:
-            self._mqtt_device.brightness(light_response.brightness)
+            mqtt_entity.brightness(light_response.brightness)
         else:
-            self._mqtt_device.off()
+            mqtt_entity.off()
+
+
+class CombinedDeviceTrigger(CombinedDevice[BTDeviceTriggerInfo]):
+    """A combined Plejd BT and MQTT device trigger."""
+
+    def _create_mqtt_device(self) -> list[Subscriber[DeviceTriggerInfo]]:
+        # Override
+        mqtt_device_info = DeviceInfo(
+            name=self._device_info.name,
+            identifiers=self._device_info.unique_id,
+            manufacturer="Plejd",  # TODO: HC for now
+            model=self._device_info.model,
+        )
+
+        # If first button is double sided, all are
+        double_sided = self._device_info.buttons[0]["double_sided"]
+
+        mqtt_entities = []
+        for index, button in enumerate(self._device_info.buttons):
+            # If a double sided button, we need to create two triggers ie button_0 and button_1
+            # If not, we only need to create one trigger ie button
+            subtype = "button_" + str(index % 2) if double_sided else "button"
+
+            mqtt_device_trigger_info = DeviceTriggerInfo(
+                name=subtype,
+                unique_id=self._device_info.unique_id + "_" + str(index % 2),
+                type=button["type"],
+                subtype=subtype,
+                device=mqtt_device_info,
+            )
+
+            settings = Settings(mqtt=self._settings.mqtt, entity=mqtt_device_trigger_info)
+            device_trigger = DeviceTrigger(settings=settings)
+            device_trigger.trigger()
+            mqtt_entities.append(device_trigger)
+            logging.debug(
+                f"Created MQTT device trigger {mqtt_device_trigger_info.name} with unique id "
+                f"{mqtt_device_trigger_info.unique_id}. The type of the device trigger is "
+                f"{mqtt_device_trigger_info.type}. It belongs to device {self._device_info.name}"
+            )
+        return mqtt_entities
+
+    async def _create_bt_device(self) -> BTDevice:
+        # Override
+        bt_device_trigger = BTDeviceTrigger(
+            bt_client=self._plejd_bt_client, device_info=self._device_info
+        )
+
+        logging.debug(
+            f"Created BT device {self._device_info.name} with unique id "
+            f"{self._device_info.unique_id} at BLE address {self._device_info.ble_address}."
+        )
+
+        try:
+            await bt_device_trigger.subscribe(self._bt_callback)
+        except PlejdNotConnectedError as err:
+            error_message = f"Failed to subscribe to BT data for device {self._device_info.name}"
+            logging.error(error_message)
+            raise BTDeviceError(error_message) from err
+
+        return bt_device_trigger
+
+    def _bt_callback(self, device_trigger_response: BTDeviceTriggerData) -> None:
+        # Override
+        if not device_trigger_response:
+            return
+
+        if not self._mqtt_entities:
+            logging.warning(f"MQTT device {self._device_info.name} not created yet")
+            return
+
+        # Figure out which entity to trigger
+        unique_id = self._device_info.unique_id + "_" + str(device_trigger_response.input)
+        for entity in self._mqtt_entities:
+            if entity._entity.unique_id == unique_id:
+                logging.debug(
+                    f"Triggering {entity._entity.name} with type {entity._entity.type} and "
+                    f"{unique_id}, belonging to device {self._device_info.name}"
+                )
+                entity.trigger()
+                return
+
+        logging.warning(
+            f"No entity with unique_id {unique_id} found for device "
+            f"{self._device_info.name} with unique_id {self._device_info.unique_id}"
+        )

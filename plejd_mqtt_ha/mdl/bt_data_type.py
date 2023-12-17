@@ -42,3 +42,11 @@ class BTLightData(BTData):
     brightness: int
     """Brightness of the Plejd light
     """
+
+
+class BTDeviceTriggerData(BTData):
+    """Parsed data type coming from a plejd light."""
+
+    input: int
+    """Which input is triggered
+    """

@@ -18,7 +18,7 @@ All new BT devices should add a new class here, inheriting from BTDevice.
 """
 
 import logging
-from typing import Callable, Generic, TypeVar
+from typing import Callable, Generic, Optional, TypeVar
 
 from plejd_mqtt_ha import constants
 from plejd_mqtt_ha.bt_client import (
@@ -27,8 +27,12 @@ from plejd_mqtt_ha.bt_client import (
     PlejdNotConnectedError,
     PlejdTimeoutError,
 )
-from plejd_mqtt_ha.mdl.bt_data_type import BTData, BTLightData
-from plejd_mqtt_ha.mdl.bt_device_info import BTDeviceInfo, BTLightInfo
+from plejd_mqtt_ha.mdl.bt_data_type import BTData, BTDeviceTriggerData, BTLightData
+from plejd_mqtt_ha.mdl.bt_device_info import (
+    BTDeviceInfo,
+    BTDeviceTriggerInfo,
+    BTLightInfo,
+)
 
 PlejdDeviceTypeT = TypeVar("PlejdDeviceTypeT", bound=BTDeviceInfo)
 
@@ -70,7 +74,7 @@ class BTDevice(Generic[PlejdDeviceTypeT]):
             self._device_info.ble_address, _proxy_callback
         )
 
-    def _decode_response(self, decrypted_data: bytearray) -> BTLightData:
+    def _decode_response(self, decrypted_data: bytearray) -> Optional[BTData]:
         """Device specific decoding to be implemented by subclass, ie device class.
 
         Parameters
@@ -197,8 +201,18 @@ class BTLight(BTDevice[BTLightInfo]):
 
         return True
 
-    def _decode_response(self, decrypted_data: bytearray) -> BTLightData:
+    def _decode_response(self, decrypted_data: bytearray) -> Optional[BTLightData]:
         # Overriden
+        command = int.from_bytes(bytes=decrypted_data[3:5], byteorder="big")
+
+        if command == constants.PlejdCommand.BLE_CMD_TIME_UPDATE:
+            logging.debug("Ignoring time update in light")
+            return None
+
+        if command not in self._device_info.supported_commands:
+            logging.error(
+                f"Command {command} not supported for device category {self._device_info.category}"
+            )
 
         state = decrypted_data[5] if len(decrypted_data) > 5 else 0
         brightness = decrypted_data[7] if len(decrypted_data) > 7 else 0
@@ -210,4 +224,40 @@ class BTLight(BTDevice[BTLightInfo]):
             state=state,
             brightness=brightness,
         )
+        return response
+
+
+class BTDeviceTrigger(BTDevice[BTDeviceTriggerInfo]):
+    """Plejd bluetooth device trigger.
+
+    This device only listens to button presses, and does not support any commands.
+    """
+
+    def _decode_response(self, decrypted_data: bytearray) -> Optional[BTDeviceTriggerData]:
+        # Overriden
+        command = int.from_bytes(bytes=decrypted_data[3:5], byteorder="big")
+
+        if command == constants.PlejdCommand.BLE_CMD_TIME_UPDATE:
+            logging.debug("Ignoring time update in device trigger")
+            return None
+
+        if command not in self._device_info.supported_commands:
+            logging.debug(
+                f"Command {command} not supported for device category {self._device_info.category}"
+            )
+            return None
+
+        if len(decrypted_data) < 8:
+            logging.debug(
+                f"Device trigger {self._device_info.name} received too short data, ignoring"
+            )
+            return None
+
+        input = decrypted_data[6]  # Which input is triggered
+
+        response = BTDeviceTriggerData(
+            raw_data=decrypted_data,
+            input=int(input),
+        )
+
         return response

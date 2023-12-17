@@ -22,7 +22,6 @@ from plejd_mqtt_ha import plejd
 
 def main():
     """Entry point of the application."""
-
     # Load environment variables
     log_level = os.getenv("LOG_LEVEL", "ERROR").upper()
     config = os.getenv("CONFIG", "/config/settings.yaml")

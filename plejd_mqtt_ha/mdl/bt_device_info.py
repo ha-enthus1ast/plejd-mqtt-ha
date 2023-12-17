@@ -41,7 +41,7 @@ class BTDeviceInfo(BaseModel):
     """Name of the device"""
     hardware_id: str  # TODO rename to device address?
     """Adress of the device within the Plejd mesh"""
-    index: int  # TODO this is the index of the entity actually
+    index: int
     """Index of the entity belonging to the device"""
     ble_address: int
     """BLE address of the device"""
@@ -61,3 +61,22 @@ class BTLightInfo(BTDeviceInfo):
 
     brightness: bool = False
     """Whether or not the light supports setting brightness"""
+
+
+class BTDeviceTriggerInfo(BTDeviceInfo):
+    """Information specific to trigger devices."""
+
+    category = "device_trigger"
+    supported_commands = [
+        constants.PlejdCommand.BLE_CMD_REMOTE_CLICK,
+        constants.PlejdCommand.BLE_CMD_STATE_CHANGE,
+        constants.PlejdCommand.BLE_CMD_DIM_CHANGE,
+        constants.PlejdCommand.BLE_CMD_DIM2_CHANGE,
+    ]
+
+    buttons: list[dict]
+    """List of buttons on the device, each button is a dict with the following keys:
+    - type: Type of button, ie DirectionUp, DirectionDown etc
+    - double_sided: Whether or not the button is double sided
+    - input: Input number of the button
+    """
