@@ -628,16 +628,9 @@ class PlejdAPI:
                 dimmable=False,
                 broadcast_clicks=False,
             )
-        if hardware_id == 13:
+        if hardware_id in {13, 16}:
             return self.PlejdDeviceType(
-                name="Generic",
-                device_category=plejd_mqtt_ha.constants.PlejdType.DEVICE_TRIGGER.value,
-                dimmable=False,
-                broadcast_clicks=True,
-            )
-        if hardware_id == 16:
-            return self.PlejdDeviceType(
-                name="-unknown-",
+                name="WPH-01",
                 device_category=plejd_mqtt_ha.constants.PlejdType.DEVICE_TRIGGER.value,
                 dimmable=False,
                 broadcast_clicks=True,
