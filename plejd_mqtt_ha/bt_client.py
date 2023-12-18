@@ -239,11 +239,21 @@ class BTClient:
             decrypted_data = self._encrypt_decrypt_data(self._crypto_key, encoded_address, data)
             # Since it is a mesh one client handles all subscriptions and we need to dispatch to
             # the correct device
-            sender_addr = decrypted_data[0]  # Address of the device that sent data in the mesh
+            command = int.from_bytes(bytes=decrypted_data[3:5], byteorder="big")
+            if command == constants.PlejdCommand.BLE_CMD_REMOTE_CLICK.value:
+                sender_addr = decrypted_data[5]  # Address of the device that sent data in the mesh
+            else:
+                sender_addr = decrypted_data[0]
+
+            logging.debug(
+                f"Recevied data from device address {sender_addr} using command {command}"
+            )
+            logging.debug(f"Raw decrypted data received: {decrypted_data.hex()}")
+
             if sender_addr not in self._callbacks:
                 logging.warning(
-                    f"Received data from device address {sender_addr} but found no registered"
-                    "callback"
+                    f"Received data from device address {sender_addr} using command {command} "
+                    "but found no registered callback"
                 )
                 return
             self._callbacks[sender_addr](bytearray(decrypted_data))  # Sender callback
@@ -345,7 +355,6 @@ class BTClient:
 
         # Check that last_data is long enough
         if len(last_data) < 9:
-            logging.error("Buffer is too short to unpack time")
             raise PlejdBluetoothError("Buffer is too short to unpack time")
 
         # Convert from unix timestamp

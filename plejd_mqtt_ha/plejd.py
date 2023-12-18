@@ -31,6 +31,7 @@ from plejd_mqtt_ha.bt_client import BTClient, PlejdBluetoothError
 from plejd_mqtt_ha.mdl.combined_device import (
     BTDeviceError,
     CombinedDevice,
+    CombinedDeviceTrigger,
     CombinedLight,
     MQTTDeviceError,
 )
@@ -176,9 +177,9 @@ async def _update_plejd_time(
                         "to date"
                     )
             except PlejdBluetoothError as err:
-                logging.error(
+                logging.warning(
                     f"Error {err} updating Plejd time using device {device._device_info.name}, "
-                    "trying next device"
+                    "probably low signal strength. Trying next device"
                 )
                 continue
 
@@ -202,7 +203,7 @@ async def write_health_data(
     """
     first_device = discovered_devices[0]  # Get first device
     bt_client = first_device._plejd_bt_client  # Get BT client
-    mqtt_client = first_device._mqtt_device.mqtt_client  # Get MQTT client
+    mqtt_client = first_device._mqtt_entities[0].mqtt_client  # Get MQTT client
 
     # Write bluetooth health check file
     bt_health_check_file = plejd_settings.health_check_dir + plejd_settings.health_check_bt_file
@@ -296,23 +297,26 @@ async def _create_devices(
 
     combined_devices = []
     for device in plejd_site.devices:
-        logging.info(f"Creating device {device.name}")
-        if device.category == "light":  # TODO HC for now
+        if device.category == constants.PlejdType.LIGHT.value:
             combined_device = CombinedLight(
                 bt_client=bt_client, settings=settings, device_info=device
             )
-            try:
-                await combined_device.start()
-                combined_devices.append(combined_device)
-            except MQTTDeviceError as err:
-                logging.warning(
-                    f"Skipping device {device.name}, cant create MQTT device: {str(err)}"
-                )
-                continue
-            except BTDeviceError as err:
-                logging.warning(f"Skipping device {device.name}, cant create BT device: {str(err)}")
-                continue
+        elif device.category == constants.PlejdType.DEVICE_TRIGGER.value:
+            combined_device = CombinedDeviceTrigger(
+                bt_client=bt_client, settings=settings, device_info=device
+            )
         else:
             logging.warning(f"{device.category} not supported")
+            continue
+
+        # Start device
+        try:
+            await combined_device.start()
+            combined_devices.append(combined_device)
+        except MQTTDeviceError as err:
+            logging.warning(f"Skipping device {device.name}, cant create MQTT device: {str(err)}")
+            continue
+        except BTDeviceError as err:
+            logging.warning(f"Skipping device {device.name}, cant create BT device: {str(err)}")
             continue
     return combined_devices

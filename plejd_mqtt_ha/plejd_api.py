@@ -23,7 +23,11 @@ from typing import Optional
 
 import plejd_mqtt_ha.constants
 import requests
-from plejd_mqtt_ha.mdl.bt_device_info import BTDeviceInfo, BTLightInfo
+from plejd_mqtt_ha.mdl.bt_device_info import (
+    BTDeviceInfo,
+    BTDeviceTriggerInfo,
+    BTLightInfo,
+)
 from plejd_mqtt_ha.mdl.settings import PlejdSettings
 from plejd_mqtt_ha.mdl.site import PlejdSite
 from pydantic import BaseModel
@@ -450,41 +454,44 @@ class PlejdAPI:
 
             if len(output_settings) > 0:  # It's an output device
                 if device_id not in output_address:
-                    logging.warning(
+                    logging.info(
                         f"Device: {device_name} does not exist as output address, skipping device"
                     )
                     continue
 
                 if device["traits"] == plejd_mqtt_ha.constants.PlejdTraits.NO_LOAD.value:
-                    logging.warning(
+                    logging.info(
                         f"No load settings found for output device: {device_name}, skipping device"
                     )
                     continue
 
-                device_index = output_settings[0][
-                    "output"
-                ]  # TODO is this really the correct index??
+                device_index = output_settings[0]["output"]
                 device_ble_address = output_address[device_id][str(device_index)]
                 # Append output index to device id for uniqueness
-                device_unique_id = device_id + f"_{device_index}"
+                device_unique_id = device_id + f"_{device_index}"  # TODO this should not be done
             elif len(input_settings) > 0:  # It's an input device
                 if device_id not in device_address:
-                    logging.warning(
+                    logging.info(
                         f"Device: {device_name} does not exist as device address, skipping"
                     )
                     continue
 
                 device_ble_address = device_address[device_id]
-                for input_setting in input_settings:
-                    if not device_type.broadcast_clicks:
-                        logging.info(
-                            f"Input device: {device_name} does not broadcast clicks, skipping"
-                        )
-                        continue
 
-                    device_index = input_setting["input"]  # TODO is this really the correct index??
-                    # Append input index to device id for uniqueness
-                    device_unique_id = device_id + f"_{device_index}"
+                if not device_type.broadcast_clicks:
+                    logging.info(f"Input device: {device_name} does not broadcast clicks, skipping")
+                    continue
+
+                device_unique_id = device_id
+                buttons = []
+                for input_setting in input_settings:
+                    # Check if it is a double sided button, ie two inputs
+                    double_sided = bool(input_setting["doubleSidedDirectionButton"])
+                    button_type = input_setting["buttonType"]
+                    device_index = input_setting["input"]
+                    buttons.append(
+                        {"type": button_type, "double_sided": double_sided, "input": device_index}
+                    )
             else:
                 logging.warning(
                     f"Device: {device_name} is neither output nor input device, skipping"
@@ -522,12 +529,19 @@ class PlejdAPI:
                 device_type.device_category
                 == plejd_mqtt_ha.constants.PlejdType.DEVICE_TRIGGER.value
             ):
-                # TODO
-                logging.warning(
-                    "Usnupported device category "
-                    f"{plejd_mqtt_ha.constants.PlejdType.DEVICE_TRIGGER.value}"
+                plejd_device = BTDeviceTriggerInfo(
+                    model=device_type.name,
+                    type=plejd_mqtt_ha.constants.PlejdType.LIGHT.value,
+                    device_id=device_id,
+                    unique_id=device_unique_id,
+                    name=device_name,
+                    hardware_id=device_hardware_id,
+                    index=device_index,
+                    ble_address=device_ble_address,
+                    category=device_type.device_category,
+                    firmware_version=device_firmware_version,
+                    buttons=buttons,
                 )
-                continue
             else:
                 continue
 
@@ -614,16 +628,9 @@ class PlejdAPI:
                 dimmable=False,
                 broadcast_clicks=False,
             )
-        if hardware_id == 13:
+        if hardware_id in {13, 16}:
             return self.PlejdDeviceType(
-                name="Generic",
-                device_category=plejd_mqtt_ha.constants.PlejdType.DEVICE_TRIGGER.value,
-                dimmable=False,
-                broadcast_clicks=True,
-            )
-        if hardware_id == 16:
-            return self.PlejdDeviceType(
-                name="-unknown-",
+                name="WPH-01",
                 device_category=plejd_mqtt_ha.constants.PlejdType.DEVICE_TRIGGER.value,
                 dimmable=False,
                 broadcast_clicks=True,
