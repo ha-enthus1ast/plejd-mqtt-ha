@@ -34,9 +34,9 @@ This project connects bluetooth devices in a plejd mesh to an MQTT broker. Devic
 The project currently supports:
 - `Plejd Light`
 - `Plejd Device Trigger`
+- `Plejd Switch (untested)`
 
 Not supported currently:
-- `Plejd Switch`
 - `Plejd Sensor`
 - `Plejd Scenes`
 
