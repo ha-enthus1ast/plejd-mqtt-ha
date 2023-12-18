@@ -372,13 +372,13 @@ files = [
 
 [[package]]
 name = "ha-mqtt-discoverable"
-version = "0.12.0"
+version = "0.13.0"
 description = ""
 optional = false
 python-versions = ">=3.10.0,<4.0"
 files = [
-    {file = "ha_mqtt_discoverable-0.12.0-py3-none-any.whl", hash = "sha256:2b8d322fa5dd2f87d9aec969815b7bf60ef0db6ac12b6ca2aed1cf3f1c5be7f7"},
-    {file = "ha_mqtt_discoverable-0.12.0.tar.gz", hash = "sha256:331684180e0d39d87b9b4a52c7aeb594fffff737f5f880fd20a74001eec90856"},
+    {file = "ha_mqtt_discoverable-0.13.0-py3-none-any.whl", hash = "sha256:a8beda5995075a449840f24697bbd64e7fe8559b58104c6cceccac5f384630f9"},
+    {file = "ha_mqtt_discoverable-0.13.0.tar.gz", hash = "sha256:501428ed0ba6f0955e6bb3075a55a74e9f08c1cf6dcb62bc47672281d49e280a"},
 ]
 
 [package.dependencies]
@@ -1236,4 +1236,4 @@ all = ["winrt-Windows.Foundation.Collections[all] (==2.0.0-beta.1)", "winrt-Wind
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11.0,<3.13"
-content-hash = "1eec2769fd0bfe127ca1a7fdb29310175f102df8d9bfd642a2853711798dc42b"
+content-hash = "65c2c5939b3f079cb06aebb54893c7b785d81bcf394197d77e81de1ab2da1692"
