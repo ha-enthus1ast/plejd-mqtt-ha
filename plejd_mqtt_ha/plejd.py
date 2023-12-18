@@ -33,6 +33,7 @@ from plejd_mqtt_ha.mdl.combined_device import (
     CombinedDevice,
     CombinedDeviceTrigger,
     CombinedLight,
+    CombinedSwitch,
     MQTTDeviceError,
 )
 from plejd_mqtt_ha.mdl.settings import PlejdSettings
@@ -178,8 +179,8 @@ async def _update_plejd_time(
                     )
             except PlejdBluetoothError as err:
                 logging.warning(
-                    f"Error {err} updating Plejd time using device {device._device_info.name}, "
-                    "probably low signal strength. Trying next device"
+                    f"Failed updating Plejd time with {err} using device {device._device_info.name}"
+                    ", probably low signal strength. Trying next device"
                 )
                 continue
 
@@ -303,6 +304,10 @@ async def _create_devices(
             )
         elif device.category == constants.PlejdType.DEVICE_TRIGGER.value:
             combined_device = CombinedDeviceTrigger(
+                bt_client=bt_client, settings=settings, device_info=device
+            )
+        elif device.category == constants.PlejdType.SWITCH.value:
+            combined_device = CombinedSwitch(
                 bt_client=bt_client, settings=settings, device_info=device
             )
         else:

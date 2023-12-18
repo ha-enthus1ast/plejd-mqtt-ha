@@ -27,6 +27,7 @@ from plejd_mqtt_ha.mdl.bt_device_info import (
     BTDeviceInfo,
     BTDeviceTriggerInfo,
     BTLightInfo,
+    BTSwitchInfo,
 )
 from plejd_mqtt_ha.mdl.settings import PlejdSettings
 from plejd_mqtt_ha.mdl.site import PlejdSite
@@ -514,11 +515,18 @@ class PlejdAPI:
                     brightness=device_type.dimmable,
                 )
             elif device_type.device_category == plejd_mqtt_ha.constants.PlejdType.SWITCH.value:
-                # TODO create
-                logging.warning(
-                    f"Usnupported device category {plejd_mqtt_ha.constants.PlejdType.SWITCH.value}"
+                plejd_device = BTSwitchInfo(
+                    model=device_type.name,
+                    type=plejd_mqtt_ha.constants.PlejdType.SWITCH.value,
+                    device_id=device_id,
+                    unique_id=device_unique_id,
+                    name=device_name,
+                    hardware_id=device_hardware_id,
+                    index=device_index,
+                    ble_address=device_ble_address,
+                    category=device_type.device_category,
+                    firmware_version=device_firmware_version,
                 )
-                continue
             elif device_type.device_category == plejd_mqtt_ha.constants.PlejdType.SENSOR.value:
                 # TODO
                 logging.warning(

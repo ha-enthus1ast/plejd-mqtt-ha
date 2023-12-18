@@ -33,12 +33,17 @@ class BTData(BaseModel):
         arbitrary_types_allowed = True  # Allow for bytearray
 
 
-class BTLightData(BTData):
+class BTSwitchData(BTData):
     """Parsed data type coming from a plejd light."""
 
     state: bool
-    """State of the light, True = light is ON
+    """State of the device, True = ON
     """
+
+
+class BTLightData(BTSwitchData):
+    """Parsed data type coming from a plejd light."""
+
     brightness: int
     """Brightness of the Plejd light
     """

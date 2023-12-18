@@ -29,15 +29,22 @@ from ha_mqtt_discoverable.sensors import (
     Light,
     LightInfo,
     Subscriber,
+    Switch,
+    SwitchInfo,
 )
 from paho.mqtt.client import Client, MQTTMessage
 from plejd_mqtt_ha.bt_client import BTClient, PlejdNotConnectedError
-from plejd_mqtt_ha.mdl.bt_data_type import BTDeviceTriggerData, BTLightData
-from plejd_mqtt_ha.mdl.bt_device import BTDevice, BTDeviceTrigger, BTLight
+from plejd_mqtt_ha.mdl.bt_data_type import (
+    BTDeviceTriggerData,
+    BTLightData,
+    BTSwitchData,
+)
+from plejd_mqtt_ha.mdl.bt_device import BTDevice, BTDeviceTrigger, BTLight, BTSwitch
 from plejd_mqtt_ha.mdl.bt_device_info import (
     BTDeviceInfo,
     BTDeviceTriggerInfo,
     BTLightInfo,
+    BTSwitchInfo,
 )
 from plejd_mqtt_ha.mdl.settings import PlejdSettings
 
@@ -187,6 +194,77 @@ class CombinedDevice(Generic[PlejdDeviceTypeT]):
             If used and not implemented, raise an exception
         """
         raise NotImplementedError
+
+
+class CombinedSwitch(CombinedDevice[BTSwitchInfo]):
+    """A combined Plejd BT and MQTT switch."""
+
+    def _create_mqtt_device(self) -> list[Subscriber[BTSwitchInfo]]:
+        # Override
+        mqtt_device_info = DeviceInfo(
+            name=self._device_info.name,
+            identifiers=self._device_info.unique_id,
+            manufacturer="Plejd",
+            model=self._device_info.model,
+        )
+
+        mqtt_switch_info = SwitchInfo(
+            name=self._device_info.name,
+            unique_id=self._device_info.unique_id + "_1",
+            device=mqtt_device_info,
+        )
+        settings = Settings(mqtt=self._settings.mqtt, entity=mqtt_switch_info)
+        switch = Switch(settings=settings, command_callback=self._mqtt_callback)
+        switch.off()  # Publish initial state to register with HA
+        return [switch]
+
+    async def _create_bt_device(self) -> BTDevice:
+        # Override
+        bt_switch = BTSwitch(bt_client=self._plejd_bt_client, device_info=self._device_info)
+        logging.info(f"Subscribing to BT device {self._device_info.name}")
+
+        try:
+            await bt_switch.subscribe(self._bt_callback)
+        except PlejdNotConnectedError as err:
+            error_message = f"Failed to subscribe to BT data for device {self._device_info.name}"
+            logging.error(error_message)
+            raise BTDeviceError(error_message) from err
+
+        return bt_switch
+
+    def _mqtt_callback(self, client: Client, user_data, message: MQTTMessage) -> None:
+        # Override
+        payload = json.loads(message.payload.decode())
+        mqtt_entity = self._mqtt_entities[0]
+        if not self._bt_device:
+            logging.info(f"BT device {self._device_info.name} not created yet")
+            return
+
+        if "state" in payload:
+            if payload["state"] == "ON":
+                if asyncio.run_coroutine_threadsafe(self._bt_device.on(), loop=self._event_loop):
+                    mqtt_entity.on()
+            else:
+                if asyncio.run_coroutine_threadsafe(self._bt_device.off(), loop=self._event_loop):
+                    mqtt_entity.off()
+        else:
+            logging.warning(f"Unknown payload {payload}")
+
+    def _bt_callback(self, switch_response: BTSwitchData) -> None:
+        # Override
+        if not switch_response:
+            return
+
+        if not self._mqtt_entities:
+            logging.info(f"MQTT device {self._device_info.name} not created yet")
+            return
+
+        mqtt_entity = self._mqtt_entities[0]  # Only one can exist
+
+        if switch_response.state:
+            mqtt_entity.on()
+        else:
+            mqtt_entity.off()
 
 
 # TODO create subclass from device category automatically??? Possible?

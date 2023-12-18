@@ -49,6 +49,15 @@ class BTDeviceInfo(BaseModel):
     """Firmware version of the device"""
 
 
+class BTSwitchInfo(BTDeviceInfo):
+    """Information specific to switch devices."""
+
+    category = "switch"
+    supported_commands = [
+        constants.PlejdCommand.BLE_CMD_STATE_CHANGE,
+    ]
+
+
 class BTLightInfo(BTDeviceInfo):
     """Information specific to light devices."""
 

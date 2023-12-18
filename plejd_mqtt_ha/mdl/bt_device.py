@@ -27,11 +27,17 @@ from plejd_mqtt_ha.bt_client import (
     PlejdNotConnectedError,
     PlejdTimeoutError,
 )
-from plejd_mqtt_ha.mdl.bt_data_type import BTData, BTDeviceTriggerData, BTLightData
+from plejd_mqtt_ha.mdl.bt_data_type import (
+    BTData,
+    BTDeviceTriggerData,
+    BTLightData,
+    BTSwitchData,
+)
 from plejd_mqtt_ha.mdl.bt_device_info import (
     BTDeviceInfo,
     BTDeviceTriggerInfo,
     BTLightInfo,
+    BTSwitchInfo,
 )
 
 PlejdDeviceTypeT = TypeVar("PlejdDeviceTypeT", bound=BTDeviceInfo)
@@ -90,6 +96,93 @@ class BTDevice(Generic[PlejdDeviceTypeT]):
         raise NotImplementedError
 
 
+class BTSwitch(BTDevice[BTSwitchInfo]):
+    """Plejd bluetooth switch."""
+
+    async def on(self) -> bool:
+        """Turn on a physical Plejd Switch.
+
+        Returns
+        -------
+        bool
+            True if successful, False otherwise
+        """
+        logging.debug(f"Turning on device {self._device_info.name}")
+        try:
+            await self._plejd_bt_client.send_command(
+                self._device_info.ble_address,
+                constants.PlejdCommand.BLE_CMD_STATE_CHANGE,
+                constants.PlejdAction.BLE_DEVICE_ON,
+                constants.PlejdResponse.BLE_REQUEST_NO_RESPONSE,
+            )
+        except PlejdNotConnectedError as err:
+            logging.warning(
+                f"Device {self._device_info.name} is not connected, cannot turn on."
+                f"Error: {str(err)}"
+            )
+            return False
+        except (PlejdBluetoothError, PlejdTimeoutError) as err:
+            logging.warning(
+                f"Failed to turn on device {self._device_info.name}, due to bluetooth a error."
+                f"Error: {str(err)}"
+            )
+            return False
+
+        return True
+
+    async def off(self) -> bool:
+        """Turn off a physical Plejd Switch.
+
+        Returns
+        -------
+        bool
+            True if successful, False otherwise
+        """
+        logging.debug(f"Turning off device {self._device_info.name}")
+
+        try:
+            await self._plejd_bt_client.send_command(
+                self._device_info.ble_address,
+                constants.PlejdCommand.BLE_CMD_STATE_CHANGE,
+                constants.PlejdAction.BLE_DEVICE_OFF,
+                constants.PlejdResponse.BLE_REQUEST_NO_RESPONSE,
+            )
+        except PlejdNotConnectedError as err:
+            logging.warning(
+                f"Device {self._device_info.name} is not connected, cannot turn on."
+                f"Error: {str(err)}"
+            )
+            return False
+        except (PlejdBluetoothError, PlejdTimeoutError) as err:
+            logging.warning(
+                f"Failed to turn on device {self._device_info.name}, due to bluetooth a error."
+                f"Error: {str(err)}"
+            )
+            return False
+
+        return True
+
+    def _decode_response(self, decrypted_data: bytearray) -> Optional[BTDeviceTriggerData]:
+        # Overriden
+        command = int.from_bytes(bytes=decrypted_data[3:5], byteorder="big")
+
+        if command == constants.PlejdCommand.BLE_CMD_TIME_UPDATE:  # Time update handled elsewhere
+            logging.debug("Ignoring time update in switch")
+            return None
+
+        if command not in self._device_info.supported_commands:
+            logging.debug(
+                f"Command {command} not supported for device category {self._device_info.category}"
+            )
+            return None
+
+        state = decrypted_data[5] if len(decrypted_data) > 5 else 0
+
+        response = BTSwitchData(raw_data=decrypted_data, state=bool(state))
+
+        return response
+
+
 class BTLight(BTDevice[BTLightInfo]):
     """Plejd bluetooth light device."""
 
@@ -106,7 +199,7 @@ class BTLight(BTDevice[BTLightInfo]):
             await self._plejd_bt_client.send_command(
                 self._device_info.ble_address,
                 constants.PlejdCommand.BLE_CMD_STATE_CHANGE,
-                constants.PlejdLightAction.BLE_DEVICE_ON,
+                constants.PlejdAction.BLE_DEVICE_ON,
                 constants.PlejdResponse.BLE_REQUEST_NO_RESPONSE,
             )
         except PlejdNotConnectedError as err:
@@ -138,7 +231,7 @@ class BTLight(BTDevice[BTLightInfo]):
             await self._plejd_bt_client.send_command(
                 self._device_info.ble_address,
                 constants.PlejdCommand.BLE_CMD_STATE_CHANGE,
-                constants.PlejdLightAction.BLE_DEVICE_OFF,
+                constants.PlejdAction.BLE_DEVICE_OFF,
                 constants.PlejdResponse.BLE_REQUEST_NO_RESPONSE,
             )
         except PlejdNotConnectedError as err:
@@ -178,7 +271,7 @@ class BTLight(BTDevice[BTLightInfo]):
 
         pad = "0" if brightness <= 0xF else ""
         s_brightness = brightness << 8 | brightness
-        data = constants.PlejdLightAction.BLE_DEVICE_DIM + pad + f"{s_brightness:X}"
+        data = constants.PlejdAction.BLE_DEVICE_DIM + pad + f"{s_brightness:X}"
         try:
             await self._plejd_bt_client.send_command(
                 self._device_info.ble_address,
