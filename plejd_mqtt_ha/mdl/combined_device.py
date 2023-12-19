@@ -371,8 +371,8 @@ class CombinedDeviceTrigger(CombinedDevice[BTDeviceTriggerInfo]):
             subtype = "button_" + str(index % 2) if double_sided else "button"
 
             mqtt_device_trigger_info = DeviceTriggerInfo(
-                name=subtype,
-                unique_id=self._device_info.unique_id + "_" + str(index % 2),
+                name=subtype + "_" + button["type"],  # ie button_0_DirectionUp
+                unique_id=self._device_info.unique_id + "_" + str(index),
                 type=button["type"],
                 subtype=subtype,
                 device=mqtt_device_info,
