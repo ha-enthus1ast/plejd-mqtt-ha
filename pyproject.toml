@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "plejd-mqtt-ha"
-version = "0.1.0"
+version = "0.1.1"
 description = ""
 authors = ["Viktor Karlquist <vkarlqui@gmail.com>"]
 readme = "README.md"
@@ -42,6 +42,7 @@ ignore="tools"
 [tool.mypy]
 warn_return_any = true
 warn_unused_configs = true
+
 
 [tool.poetry.group.test.dependencies]
 pytest-mock = "^3.6.1"
