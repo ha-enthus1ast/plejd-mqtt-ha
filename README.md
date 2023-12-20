@@ -109,7 +109,7 @@ service bluetooth stop
 Once the service is halted, execute the following command in your terminal:
 
 ```bash
-docker run -v ./config/:/config/ --rm --net=host --privileged -it plejd
+docker run -v ./data/:/data/ --rm --net=host --privileged -it plejd
 ```
 
 This command starts a new Docker container from the plejd image. The program inside the container will start running immediately.

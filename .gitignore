@@ -1,4 +1,4 @@
-/config
+/data
 *.pkl
 __pycache__
 .vscode

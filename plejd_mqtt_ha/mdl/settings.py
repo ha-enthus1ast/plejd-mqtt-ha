@@ -42,7 +42,7 @@ class API(BaseModel):
     - "FIRST_CACHE": Caches the plejd site on first run, then uses cache.
     - "NEEDED_CACHE": Uses cached site only when network is not available.
     """
-    cache_dir: str = "/config/"  # TODO: Does not belong here
+    cache_dir: str = "/data/"  # TODO: Does not belong here
     """Directory to store cached site, not used if cache_policy is set to NO_CACHE"""
     cache_file: str = "site.json"
     """File name for cached site, not used if cache_policy is set to NO_CACHE"""
