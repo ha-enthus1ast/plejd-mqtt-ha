@@ -84,8 +84,8 @@ class PlejdTraits(int, Enum):
     """Plejd device traits."""
 
     NO_LOAD = 0
-    NON_DIMMABLE = 9  # TODO: Not used yet
-    DIMMABLE = 11  # TODO: Not used yet
+    NON_DIMMABLE = 9
+    DIMMABLE = 11
 
 
 # Device types
