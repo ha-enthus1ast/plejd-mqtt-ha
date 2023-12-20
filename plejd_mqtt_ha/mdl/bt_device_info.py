@@ -39,7 +39,7 @@ class BTDeviceInfo(BaseModel):
     """Unique identity of the device, required by HA"""
     name: str
     """Name of the device"""
-    hardware_id: str  # TODO rename to device address?
+    hardware_id: str
     """Adress of the device within the Plejd mesh"""
     index: int
     """Index of the entity belonging to the device"""
