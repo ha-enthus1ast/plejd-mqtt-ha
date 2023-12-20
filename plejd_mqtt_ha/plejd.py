@@ -298,7 +298,6 @@ async def _load_plejd_site(settings: PlejdSettings) -> PlejdSite:
                     )  # Exponential backoff capped at API_MAX_RETRY_TIME
                     logging.error(f"Retrying in {backoff_time} seconds (retry {retry_count}")
                     await asyncio.sleep(backoff_time)
-                    retry_count += 1
 
         plejd_site = await _api_retry_loop()  # retry until success
 
