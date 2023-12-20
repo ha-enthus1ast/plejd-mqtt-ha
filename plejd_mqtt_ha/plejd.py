@@ -157,6 +157,7 @@ async def _update_plejd_time(
     """
     bt_client = discovered_devices[0]._plejd_bt_client
     while True:  # Run forever
+        time_set = False
         for device in discovered_devices:
             try:
                 ble_address = device._device_info.ble_address
@@ -172,19 +173,22 @@ async def _update_plejd_time(
                 ):
                     await bt_client.set_plejd_time(ble_address, current_sys_time)
                     logging.info(f"Updated Plejd time using device {device._device_info.name}")
+                    time_set = True
+                    break
                 else:
                     logging.info(
                         f"Used device {device._device_info.name} to tell Plejd time is already up"
                         "to date"
                     )
-            except PlejdBluetoothError as err:
-                logging.warning(
-                    f"Failed updating Plejd time with {err} using device {device._device_info.name}"
-                    ", probably low signal strength. Trying next device"
-                )
+                    time_set = True
+                    break
+            except PlejdBluetoothError:
                 continue
 
-            await asyncio.sleep(plejd_settings.time_update_interval)
+        if not time_set:
+            logging.warning("Failed to update Plejd time, no devices available")
+
+        await asyncio.sleep(plejd_settings.time_update_interval)
 
 
 async def write_health_data(
