@@ -174,12 +174,12 @@ Configuration of the application. See example configuration [here](#example).
 
 ### BLE
 
-| Parameter                 | Description                                                      | Default |
-|---------------------------|------------------------------------------------------------------|---------|
-| `adapter` (Optional)      | If a specific Bluetooth adapter is to be used. **NOT USED YET!** | None    |
-| `scan_time` (Optional)    | Time to scan for Plejd Bluetooth devices                         | 10.0    |
-| `retries` (Optional)      | Number of times to try and reconnect to Plejd mesh               | 10      |
-| `time_retries` (Optional) | Time between retries                                             | 10.0    |
+| Parameter                 | Description                                        | Default |
+|---------------------------|----------------------------------------------------|---------|
+| `adapter` (Optional)      | If a specific Bluetooth adapter is to be used.     | None    |
+| `scan_time` (Optional)    | Time to scan for Plejd Bluetooth devices           | 10.0    |
+| `retries` (Optional)      | Number of times to try and reconnect to Plejd mesh | 10      |
+| `time_retries` (Optional) | Time between retries                               | 10.0    |
 | `preferred_device` (Optional) | If a specific Plejd device is to be used as mesh ingress point.             |
 |                               | Not recommended to use this setting. **NOT USED YET!**                      | None    |
 

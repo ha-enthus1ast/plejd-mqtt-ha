@@ -86,7 +86,7 @@ class MQTT(BaseModel):
 class BLE(BaseModel):
     """Settings related to BLE."""
 
-    adapter: Optional[str] = None  # TODO: implement
+    adapter: Optional[str] = None
     """If a specific bluetooth adapter is to be used"""
     preferred_device: Optional[str] = None  # TODO: implement
     """If a specific Plejd device is to be used as mesh ingress point, if not set the device with
