@@ -427,7 +427,12 @@ class BTClient:
         logging.debug(f"Using device {plejd_device} with signal strenth {curr_rssi}")
 
         # Connect to plejd mesh using the selected device
-        self._client = BleakClient(plejd_device)
+        try:
+            self._client = BleakClient(plejd_device, device=self._settings.ble.adapter)
+        except (BleakError, BleakDBusError) as err:
+            logging.error(f"Could not create bleak client: {str(err)}")
+            return False
+
         if not await self._client.connect():
             logging.warning("Could not connect to plejd device")
             return False

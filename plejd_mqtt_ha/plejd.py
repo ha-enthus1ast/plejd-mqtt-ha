@@ -21,10 +21,13 @@ import asyncio
 import datetime
 import logging
 import logging.handlers
+import math
 import os
 import sys
 import time
 
+import ntplib
+import pytz
 import yaml
 from plejd_mqtt_ha import constants
 from plejd_mqtt_ha.bt_client import BTClient, PlejdBluetoothError
@@ -42,7 +45,7 @@ from plejd_mqtt_ha.plejd_api import IncorrectCredentialsError, PlejdAPI, PlejdAP
 from pydantic import ValidationError
 
 
-def start(config: str, log_level: str, log_file: str) -> None:
+def start(config: str, log_level: str, log_file: str, cache_file: str) -> None:
     """Start the Plejd service.
 
     This function will never return unless program exits, for whatever reason.
@@ -55,18 +58,18 @@ def start(config: str, log_level: str, log_file: str) -> None:
         Log level to use
     log_file : str
         Path to the log file
+    cache_file : str
+        Path to the cache file
     """
     try:
-        asyncio.run(_run(config, log_level, log_file))
+        asyncio.run(_run(config, log_level, log_file, cache_file))
     except Exception as ex:
         logging.critical("Unhandled exception occured, exiting")
         logging.critical(ex)
         sys.exit()
-    finally:
-        pass  # TODO: Cleanup
 
 
-async def _run(config: str, log_level: str, log_file: str) -> None:
+async def _run(config: str, log_level: str, log_file: str, cache_file: str) -> None:
     """Entry point for starting and running the program.
 
     Parameters
@@ -77,6 +80,8 @@ async def _run(config: str, log_level: str, log_file: str) -> None:
         Log level to use
     log_file : str
         Path to the log file
+    cache_file : str
+        Path to the cache file
 
     Raises
     ------
@@ -121,7 +126,7 @@ async def _run(config: str, log_level: str, log_file: str) -> None:
     logging.info("Loaded Plejd settings..       [OK]")
 
     try:
-        plejd_site = await _load_plejd_site(plejd_settings)
+        plejd_site = await _load_plejd_site(plejd_settings, cache_file)
     except IncorrectCredentialsError as err:
         logging.critical(str(err))
         return  # exit program if incorrect credentials
@@ -156,18 +161,40 @@ async def _update_plejd_time(
         List of discovered devices
     """
     bt_client = discovered_devices[0]._plejd_bt_client
+
+    # Fetch timezone info
+    if plejd_settings.timezone is not None:
+        try:
+            timezone = pytz.timezone(plejd_settings.timezone)
+        except pytz.UnknownTimeZoneError:
+            logging.warning("Unknown timezone, defaulting to local system timezone")
+            timezone = None
+    else:
+        timezone = None
+
     while True:  # Run forever
         time_set = False
+
+        # Get current time
+        try:
+            if plejd_settings.time_use_sys_time:
+                current_sys_time = datetime.datetime.now(timezone)
+            else:
+                logging.info("Getting time from NTP server")
+                ntp_client = ntplib.NTPClient()
+                response = ntp_client.request("pool.ntp.org")
+                current_sys_time = datetime.datetime.fromtimestamp(response.tx_time, timezone)
+        except ntplib.NTPException:
+            logging.warning("Failed to get time from NTP server, using system time instead")
+            current_sys_time = datetime.datetime.now(timezone)
+
+        # Update Plejd time
         for device in discovered_devices:
             try:
                 ble_address = device._device_info.ble_address
                 current_plejd_time = await bt_client.get_plejd_time(ble_address)
 
-                if plejd_settings.time_use_sys_time:
-                    current_sys_time = datetime.datetime.now()
-                else:
-                    current_sys_time = None  # TODO: not implemented
-
+                current_plejd_time = current_plejd_time.replace(tzinfo=timezone)  # add timezone
                 if abs(current_plejd_time - current_sys_time) > datetime.timedelta(
                     seconds=plejd_settings.time_update_interval
                 ):
@@ -247,12 +274,12 @@ async def write_health_data(
             await asyncio.sleep(plejd_settings.health_check_interval)
 
 
-async def _load_plejd_site(settings: PlejdSettings) -> PlejdSite:
+async def _load_plejd_site(settings: PlejdSettings, cache_file: str) -> PlejdSite:
     # Load Plejd site from API, retry until success, or exit if credentials are incorrect
     api = PlejdAPI(settings)
 
     try:
-        plejd_site = api.get_site()
+        plejd_site = api.get_site(cache_file)
     except IncorrectCredentialsError:
         logging.critical("Failed to login to Plejd API, incorrect credentials in settings.json")
         raise
@@ -261,12 +288,18 @@ async def _load_plejd_site(settings: PlejdSettings) -> PlejdSite:
 
         async def _api_retry_loop() -> PlejdSite:
             logging.info("Entering Plejd API retry loop")
+            retry_count = 0
             while True:
                 try:
-                    return api.get_site()
+                    return api.get_site(cache_file)
                 except PlejdAPIError as err:
                     logging.error(f"Failed to login to Plejd API: {str(err)})")
-                    await asyncio.sleep(10)  # TODO: HC value, add backoff?
+                    retry_count += 1
+                    backoff_time = min(
+                        constants.API_MAX_RETRY_TIME, math.pow(2, retry_count)
+                    )  # Exponential backoff capped at API_MAX_RETRY_TIME
+                    logging.error(f"Retrying in {backoff_time} seconds (retry {retry_count}")
+                    await asyncio.sleep(backoff_time)
 
         plejd_site = await _api_retry_loop()  # retry until success
 
@@ -282,13 +315,19 @@ async def _create_bt_client(crypto_key: str, settings: PlejdSettings) -> BTClien
     stay_connected = True
 
     if not await bt_client.connect(stay_connected):
+        logging.error("Failed to connect to Plejd BT mesh")
 
         async def _bt_retry_loop() -> None:
-            logging.info("Entering Plejd BT retry loop")
+            retry_count = 0
             while True:
                 if await bt_client.connect(stay_connected):
                     return
-                await asyncio.sleep(10)  # TODO: HC value, add backoff?
+                retry_count += 1
+                backoff_time = min(
+                    constants.BT_MAX_RETRY_TIME, math.pow(2, retry_count)
+                )  # Exponential backoff capped at BT_MAX_RETRY_TIME
+                logging.error(f"Retrying in {backoff_time} seconds (retry {retry_count}")
+                await asyncio.sleep(backoff_time)
 
         await _bt_retry_loop()
 

@@ -18,8 +18,8 @@ Thanks for considering contributing to the project!
 ## Getting Started
 
 Before you start contributing, please review these guidelines:
-<!-- TODO: Add links to issue tracker and pull requests -->
-1. Check out the project's issue tracker and pull requests to see if someone else has already reported and/or fixed the issue you're facing.
+
+1. Check out the project's [issue tracker](https://github.com/ha-enthus1ast/plejd-mqtt-ha/issues) and [pull requests](https://github.com/ha-enthus1ast/plejd-mqtt-ha/pulls) to see if someone else has already reported and/or fixed the issue you're facing.
 
 2. If not, open a new issue. Please provide as much information as possible to help the maintainers understand and solve the problem.
 

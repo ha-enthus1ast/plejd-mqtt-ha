@@ -4,7 +4,8 @@ ENV WORKDIR=/app \
     CONFIG=/data/settings.yaml \
     LOG_LEVEL=ERROR \
     LOG_FILE=/data/logs/plejd.log \
-    LOG_FILE_HC=/data/logs/healthcheck.log
+    LOG_FILE_HC=/data/logs/healthcheck.log \
+    CACHE_FILE=/data/site.json
 
 RUN apt-get update \
   && apt-get --no-install-recommends install -y bluez=5.66-1 bluetooth=5.66-1 \

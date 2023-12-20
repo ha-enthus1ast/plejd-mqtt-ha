@@ -63,4 +63,4 @@ class TestPlejdAPI:
 
         mocker.patch("requests.post", side_effect=exception)
         with pytest.raises(PlejdAPIError):
-            api.get_site()
+            api.get_site("cache_file")

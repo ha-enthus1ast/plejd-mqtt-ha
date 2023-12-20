@@ -23,10 +23,10 @@ PYTHON_FLAKE8_ARGUMENTS:
 
 DISABLE_LINTERS:
   - SPELL_CSPELL
-  - PYTHON_PYRIGHT # TODO this should not be disabled!!
-  - PYTHON_MYPY # TODO this should not be disabled!!
-  - REPOSITORY_CHECKOV # TODO this should not be disabled!!
-  - COPYPASTE_JSCPD # TODO this should not be disabled!!
+  - PYTHON_PYRIGHT
+  - PYTHON_MYPY
+  - REPOSITORY_CHECKOV
+  - COPYPASTE_JSCPD
 
 SHOW_ELAPSED_TIME: true
 

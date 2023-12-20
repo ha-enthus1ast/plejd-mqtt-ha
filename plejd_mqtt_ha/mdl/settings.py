@@ -42,10 +42,6 @@ class API(BaseModel):
     - "FIRST_CACHE": Caches the plejd site on first run, then uses cache.
     - "NEEDED_CACHE": Uses cached site only when network is not available.
     """
-    cache_dir: str = "/data/"  # TODO: Does not belong here
-    """Directory to store cached site, not used if cache_policy is set to NO_CACHE"""
-    cache_file: str = "site.json"
-    """File name for cached site, not used if cache_policy is set to NO_CACHE"""
 
     @validator("cache_policy")
     def cache_policy_is_valid(cls, v):
@@ -90,7 +86,7 @@ class MQTT(BaseModel):
 class BLE(BaseModel):
     """Settings related to BLE."""
 
-    adapter: Optional[str] = None  # TODO: implement
+    adapter: Optional[str] = None
     """If a specific bluetooth adapter is to be used"""
     preferred_device: Optional[str] = None  # TODO: implement
     """If a specific Plejd device is to be used as mesh ingress point, if not set the device with
@@ -131,5 +127,10 @@ class PlejdSettings(BaseModel):
     time_update_threshold: float = 10.0
     """Time difference in seconds between Plejd time and local time before updating Plejd time"""
     time_use_sys_time: bool = True
-    """Whether or not to use system time instead of NTP time"""
-    # TODO: Add ntp server option
+    """Whether or not to use system time instead of time from an NTP server"""
+    timezone: Optional[str] = None
+    """Timezone to use for time updates, if not set system timezone will be used.
+    Should be in the form of e.g. "Europe/Stockholm"
+    """
+    ntp_server: Optional[str] = "pool.ntp.org"
+    """NTP server to use for time updates, if not set system time will be used"""
