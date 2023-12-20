@@ -21,6 +21,7 @@ import asyncio
 import datetime
 import logging
 import logging.handlers
+import math
 import os
 import sys
 import time
@@ -285,12 +286,19 @@ async def _load_plejd_site(settings: PlejdSettings) -> PlejdSite:
 
         async def _api_retry_loop() -> PlejdSite:
             logging.info("Entering Plejd API retry loop")
+            retry_count = 0
             while True:
                 try:
                     return api.get_site()
                 except PlejdAPIError as err:
                     logging.error(f"Failed to login to Plejd API: {str(err)})")
-                    await asyncio.sleep(10)  # TODO: HC value, add backoff?
+                    retry_count += 1
+                    backoff_time = min(
+                        constants.API_MAX_RETRY_TIME, math.pow(2, retry_count)
+                    )  # Exponential backoff capped at API_MAX_RETRY_TIME
+                    logging.error(f"Retrying in {backoff_time} seconds (retry {retry_count}")
+                    await asyncio.sleep(backoff_time)
+                    retry_count += 1
 
         plejd_site = await _api_retry_loop()  # retry until success
 
@@ -306,13 +314,19 @@ async def _create_bt_client(crypto_key: str, settings: PlejdSettings) -> BTClien
     stay_connected = True
 
     if not await bt_client.connect(stay_connected):
+        logging.error("Failed to connect to Plejd BT mesh")
 
         async def _bt_retry_loop() -> None:
-            logging.info("Entering Plejd BT retry loop")
+            retry_count = 0
             while True:
                 if await bt_client.connect(stay_connected):
                     return
-                await asyncio.sleep(10)  # TODO: HC value, add backoff?
+                retry_count += 1
+                backoff_time = min(
+                    constants.BT_MAX_RETRY_TIME, math.pow(2, retry_count)
+                )  # Exponential backoff capped at BT_MAX_RETRY_TIME
+                logging.error(f"Retrying in {backoff_time} seconds (retry {retry_count}")
+                await asyncio.sleep(backoff_time)
 
         await _bt_retry_loop()
 

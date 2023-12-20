@@ -101,3 +101,7 @@ class PlejdType(str, Enum):
 
 LOG_FILE_SIZE = 1024 * 1024 * 1  # 1 MB
 LOG_FILE_COUNT = 3
+
+API_MAX_RETRY_TIME = 60 * 5  # 5 minutes
+
+BT_MAX_RETRY_TIME = 60  # 1 minute
