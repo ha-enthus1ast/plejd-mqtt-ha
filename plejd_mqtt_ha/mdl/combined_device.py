@@ -33,6 +33,7 @@ from ha_mqtt_discoverable.sensors import (
     SwitchInfo,
 )
 from paho.mqtt.client import Client, MQTTMessage
+from plejd_mqtt_ha import constants
 from plejd_mqtt_ha.bt_client import BTClient, PlejdNotConnectedError
 from plejd_mqtt_ha.mdl.bt_data_type import (
     BTDeviceTriggerData,
@@ -204,7 +205,7 @@ class CombinedSwitch(CombinedDevice[BTSwitchInfo]):
         mqtt_device_info = DeviceInfo(
             name=self._device_info.name,
             identifiers=self._device_info.unique_id,
-            manufacturer="Plejd",
+            manufacturer=constants.MANUFACTURER,
             model=self._device_info.model,
         )
 
@@ -276,7 +277,7 @@ class CombinedLight(CombinedDevice[BTLightInfo]):
         mqtt_device_info = DeviceInfo(
             name=self._device_info.name,
             identifiers=self._device_info.unique_id,
-            manufacturer="Plejd",
+            manufacturer=constants.MANUFACTURER,
             model=self._device_info.model,
         )
         supported_color_modes = None
@@ -357,7 +358,7 @@ class CombinedDeviceTrigger(CombinedDevice[BTDeviceTriggerInfo]):
         mqtt_device_info = DeviceInfo(
             name=self._device_info.name,
             identifiers=self._device_info.unique_id,
-            manufacturer="Plejd",  # TODO: HC for now
+            manufacturer=constants.MANUFACTURER,
             model=self._device_info.model,
         )
 
