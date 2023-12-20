@@ -512,6 +512,18 @@ files = [
 ]
 
 [[package]]
+name = "ntplib"
+version = "0.4.0"
+description = "Python NTP library"
+category = "main"
+optional = false
+python-versions = "*"
+files = [
+    {file = "ntplib-0.4.0-py2.py3-none-any.whl", hash = "sha256:8d27375329ed7ff38755f7b6d4658b28edc147cadf40338a63a0da8133469d60"},
+    {file = "ntplib-0.4.0.tar.gz", hash = "sha256:899d8fb5f8c2555213aea95efca02934c7343df6ace9d7628a5176b176906267"},
+]
+
+[[package]]
 name = "numpy"
 version = "1.26.2"
 description = "Fundamental package for array computing in Python"
@@ -1290,4 +1302,4 @@ all = ["winrt-Windows.Foundation.Collections[all] (==2.0.0-beta.1)", "winrt-Wind
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11.0,<3.13"           # Bleak requires version < 3.13
-content-hash = "65c2c5939b3f079cb06aebb54893c7b785d81bcf394197d77e81de1ab2da1692"
+content-hash = "912011298e83a60f6e91e85a75b406a3b244de197df21bca2c36167466ff94b6"

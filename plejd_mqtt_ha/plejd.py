@@ -25,6 +25,8 @@ import os
 import sys
 import time
 
+import ntplib
+import pytz
 import yaml
 from plejd_mqtt_ha import constants
 from plejd_mqtt_ha.bt_client import BTClient, PlejdBluetoothError
@@ -156,18 +158,40 @@ async def _update_plejd_time(
         List of discovered devices
     """
     bt_client = discovered_devices[0]._plejd_bt_client
+
+    # Fetch timezone info
+    if plejd_settings.timezone is not None:
+        try:
+            timezone = pytz.timezone(plejd_settings.timezone)
+        except pytz.UnknownTimeZoneError:
+            logging.warning("Unknown timezone, defaulting to local system timezone")
+            timezone = None
+    else:
+        timezone = None
+
     while True:  # Run forever
         time_set = False
+
+        # Get current time
+        try:
+            if plejd_settings.time_use_sys_time:
+                current_sys_time = datetime.datetime.now(timezone)
+            else:
+                logging.info("Getting time from NTP server")
+                ntp_client = ntplib.NTPClient()
+                response = ntp_client.request("pool.ntp.org")
+                current_sys_time = datetime.datetime.fromtimestamp(response.tx_time, timezone)
+        except ntplib.NTPException:
+            logging.warning("Failed to get time from NTP server, using system time instead")
+            current_sys_time = datetime.datetime.now(timezone)
+
+        # Update Plejd time
         for device in discovered_devices:
             try:
                 ble_address = device._device_info.ble_address
                 current_plejd_time = await bt_client.get_plejd_time(ble_address)
 
-                if plejd_settings.time_use_sys_time:
-                    current_sys_time = datetime.datetime.now()
-                else:
-                    current_sys_time = None  # TODO: not implemented
-
+                current_plejd_time = current_plejd_time.replace(tzinfo=timezone)  # add timezone
                 if abs(current_plejd_time - current_sys_time) > datetime.timedelta(
                     seconds=plejd_settings.time_update_interval
                 ):

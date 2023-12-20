@@ -131,5 +131,10 @@ class PlejdSettings(BaseModel):
     time_update_threshold: float = 10.0
     """Time difference in seconds between Plejd time and local time before updating Plejd time"""
     time_use_sys_time: bool = True
-    """Whether or not to use system time instead of NTP time"""
-    # TODO: Add ntp server option
+    """Whether or not to use system time instead of time from an NTP server"""
+    timezone: Optional[str] = None
+    """Timezone to use for time updates, if not set system timezone will be used.
+    Should be in the form of e.g. "Europe/Stockholm"
+    """
+    ntp_server: Optional[str] = "pool.ntp.org"
+    """NTP server to use for time updates, if not set system time will be used"""

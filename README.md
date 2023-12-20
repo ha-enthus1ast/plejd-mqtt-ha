@@ -132,17 +132,19 @@ Configuration of the application. See example configuration [here](#example).
 
 ### General
 
-| Parameter                                | Description                                                                             | Default     |
-|------------------------------------------|-----------------------------------------------------------------------------------------|-------------|
-| `health_check` (Optional)                | Enable health check                                                                     | True        |
-| `health_check_interval` (Optional)       | Interval in seconds between health check writes                                         | 60.0        |
-| `health_check_dir` (Optional)            | Directory to store health check files                                                   | "~/.plejd/" |
-| `health_check_bt_file` (Optional)        | File name for Bluetooth health check                                                    | "bluetooth" |
-| `health_check_mqtt_file` (Optional)      | File name for MQTT health check                                                         | "mqtt"      |
-| `health_check_heartbeat_file` (Optional) | File name for heartbeat file                                                            | "heartbeat" |
-| `time_update_interval` (Optional)        | Interval in seconds between updating Plejd time                                         | 3600.0      |
-| `time_update_threshold` (Optional)       | Time difference in seconds between Plejd time and local time before updating Plejd time | 10.0        |
-| `time_use_sys_time` (Optional)           | Whether or not to use system time instead of NTP time **NOT USED YET!**                 | True        |
+| Parameter                                | Description                                                                                                                 | Default        |
+|------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------|----------------|
+| `health_check` (Optional)                | Enable health check                                                                                                         | True           |
+| `health_check_interval` (Optional)       | Interval in seconds between health check writes                                                                             | 60.0           |
+| `health_check_dir` (Optional)            | Directory to store health check files                                                                                       | "~/.plejd/"    |
+| `health_check_bt_file` (Optional)        | File name for Bluetooth health check                                                                                        | "bluetooth"    |
+| `health_check_mqtt_file` (Optional)      | File name for MQTT health check                                                                                             | "mqtt"         |
+| `health_check_heartbeat_file` (Optional) | File name for heartbeat file                                                                                                | "heartbeat"    |
+| `time_update_interval` (Optional)        | Interval in seconds between updating Plejd time                                                                             | 3600.0         |
+| `time_update_threshold` (Optional)       | Time difference in seconds between Plejd time and local time before updating Plejd time                                     | 10.0           |
+| `time_use_sys_time` (Optional)           | Whether or not to use system time instead of NTP time                                                                       | True           |
+| `timezone` (Optional)                    | Timezone to use for time updates, if not set system timezone will be used. Should be in the form of e.g. "Europe/Stockholm" | None           |
+| `ntp_server` (Optional)                  | NTP server to use for time updates, if not set system time will be used                                                     | "pool.ntp.org" |
 
 ### API
 
