@@ -67,8 +67,6 @@ def start(config: str, log_level: str, log_file: str, cache_file: str) -> None:
         logging.critical("Unhandled exception occured, exiting")
         logging.critical(ex)
         sys.exit()
-    finally:
-        pass  # TODO: Cleanup
 
 
 async def _run(config: str, log_level: str, log_file: str, cache_file: str) -> None:
