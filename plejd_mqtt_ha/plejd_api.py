@@ -528,7 +528,6 @@ class PlejdAPI:
                     firmware_version=device_firmware_version,
                 )
             elif device_type.device_category == plejd_mqtt_ha.constants.PlejdType.SENSOR.value:
-                # TODO
                 logging.warning(
                     f"Usnupported device category {plejd_mqtt_ha.constants.PlejdType.SENSOR.value}"
                 )
