@@ -321,9 +321,7 @@ class BTClient:
             Returns the time in datetime format
         """
         if not self.is_connected():
-            error_message = "Trying to get time when not connected to Plejd mesh"
-            logging.error(error_message)
-            raise PlejdNotConnectedError(error_message)
+            raise PlejdNotConnectedError("Trying to get time when not connected to Plejd mesh")
 
         try:
             # Requires atomic operation, otherwise we might miss the response
@@ -339,7 +337,6 @@ class BTClient:
                 # Read respone
                 last_data = await self.get_last_data()
         except (PlejdBluetoothError, PlejdNotConnectedError, PlejdTimeoutError):
-            logging.error("Failed to read time from Plejd mesh, when calling get_last_data")
             raise
 
         # Make sure we receive the time update command
@@ -347,10 +344,6 @@ class BTClient:
             int.from_bytes(last_data[3:5], "big")
             == constants.PlejdCommand.BLE_CMD_TIME_UPDATE.value
         ):
-            logging.warning(
-                "Failed to read time from Plejd mesh, using device: %s",
-                ble_address,
-            )
             raise UnsupportedCommandError("Received unknown command")
 
         # Check that last_data is long enough

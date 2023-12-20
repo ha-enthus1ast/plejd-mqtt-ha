@@ -40,7 +40,7 @@ FROM base as final
 
 RUN adduser plejd bluetooth
 
-ENV PYTHONPATH="$WORKDIR/.venv/lib/python3.11/site-packages:${PYTHONPATH}"
+ENV PYTHONPATH="$WORKDIR/.venv/lib/python3.12/site-packages:${PYTHONPATH}"
 
 # Copy the built virtualenv deps from the builder stage
 COPY --from=builder /app/.venv $WORKDIR/.venv
