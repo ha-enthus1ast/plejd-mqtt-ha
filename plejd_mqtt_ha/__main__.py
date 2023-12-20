@@ -24,8 +24,8 @@ def main():
     """Entry point of the application."""
     # Load environment variables
     log_level = os.getenv("LOG_LEVEL", "ERROR").upper()
-    config = os.getenv("CONFIG", "/config/settings.yaml")
-    log_file = os.getenv("LOG_FILE", "/config/logs/plejd.log")
+    config = os.getenv("CONFIG", "/data/settings.yaml")
+    log_file = os.getenv("LOG_FILE", "/data/logs/plejd.log")
 
     sys.exit(plejd.start(config=config, log_level=log_level, log_file=log_file))
 

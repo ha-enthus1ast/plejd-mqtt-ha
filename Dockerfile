@@ -1,10 +1,10 @@
 FROM python:3.12 as base
 
 ENV WORKDIR=/app \
-    CONFIG=/config/settings.yaml \
+    CONFIG=/data/settings.yaml \
     LOG_LEVEL=ERROR \
-    LOG_FILE=/config/logs/plejd.log \
-    LOG_FILE_HC=/config/logs/healthcheck.log
+    LOG_FILE=/data/logs/plejd.log \
+    LOG_FILE_HC=/data/logs/healthcheck.log
 
 RUN apt-get update \
   && apt-get --no-install-recommends install -y bluez=5.66-1 bluetooth=5.66-1 \

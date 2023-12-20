@@ -166,8 +166,8 @@ def main() -> int:
     """
     # Load environment variables
     log_level = os.getenv("LOG_LEVEL", "ERROR").upper()
-    config = os.getenv("CONFIG", "/config/settings.yaml")
-    log_file = os.getenv("LOG_FILE_HC", "/config/logs/healthcheck.log")
+    config = os.getenv("CONFIG", "/data/settings.yaml")
+    log_file = os.getenv("LOG_FILE_HC", "/data/logs/healthcheck.log")
 
     numeric_level = getattr(logging, log_level.upper(), None)
     if not isinstance(numeric_level, int):

@@ -7,6 +7,6 @@ services:
       context: .
       dockerfile: Dockerfile
     volumes:
-      - ./config/:/config/
+      - ./data/:/data/
     network_mode: host
     privileged: true
