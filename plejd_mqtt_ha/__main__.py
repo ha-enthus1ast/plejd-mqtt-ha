@@ -23,11 +23,14 @@ from plejd_mqtt_ha import plejd
 def main():
     """Entry point of the application."""
     # Load environment variables
-    log_level = os.getenv("LOG_LEVEL", "ERROR").upper()
-    config = os.getenv("CONFIG", "/data/settings.yaml")
-    log_file = os.getenv("LOG_FILE", "/data/logs/plejd.log")
+    log_level = os.getenv("LOG_LEVEL").upper()
+    cache_file = os.getenv("CACHE_FILE")
+    config = os.getenv("CONFIG")
+    log_file = os.getenv("LOG_FILE")
 
-    sys.exit(plejd.start(config=config, log_level=log_level, log_file=log_file))
+    sys.exit(
+        plejd.start(config=config, log_level=log_level, log_file=log_file, cache_file=cache_file)
+    )
 
 
 if __name__ == "__main__":

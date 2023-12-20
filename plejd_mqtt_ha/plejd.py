@@ -45,7 +45,7 @@ from plejd_mqtt_ha.plejd_api import IncorrectCredentialsError, PlejdAPI, PlejdAP
 from pydantic import ValidationError
 
 
-def start(config: str, log_level: str, log_file: str) -> None:
+def start(config: str, log_level: str, log_file: str, cache_file: str) -> None:
     """Start the Plejd service.
 
     This function will never return unless program exits, for whatever reason.
@@ -58,9 +58,11 @@ def start(config: str, log_level: str, log_file: str) -> None:
         Log level to use
     log_file : str
         Path to the log file
+    cache_file : str
+        Path to the cache file
     """
     try:
-        asyncio.run(_run(config, log_level, log_file))
+        asyncio.run(_run(config, log_level, log_file, cache_file))
     except Exception as ex:
         logging.critical("Unhandled exception occured, exiting")
         logging.critical(ex)
@@ -69,7 +71,7 @@ def start(config: str, log_level: str, log_file: str) -> None:
         pass  # TODO: Cleanup
 
 
-async def _run(config: str, log_level: str, log_file: str) -> None:
+async def _run(config: str, log_level: str, log_file: str, cache_file: str) -> None:
     """Entry point for starting and running the program.
 
     Parameters
@@ -80,6 +82,8 @@ async def _run(config: str, log_level: str, log_file: str) -> None:
         Log level to use
     log_file : str
         Path to the log file
+    cache_file : str
+        Path to the cache file
 
     Raises
     ------
@@ -124,7 +128,7 @@ async def _run(config: str, log_level: str, log_file: str) -> None:
     logging.info("Loaded Plejd settings..       [OK]")
 
     try:
-        plejd_site = await _load_plejd_site(plejd_settings)
+        plejd_site = await _load_plejd_site(plejd_settings, cache_file)
     except IncorrectCredentialsError as err:
         logging.critical(str(err))
         return  # exit program if incorrect credentials
@@ -272,12 +276,12 @@ async def write_health_data(
             await asyncio.sleep(plejd_settings.health_check_interval)
 
 
-async def _load_plejd_site(settings: PlejdSettings) -> PlejdSite:
+async def _load_plejd_site(settings: PlejdSettings, cache_file: str) -> PlejdSite:
     # Load Plejd site from API, retry until success, or exit if credentials are incorrect
     api = PlejdAPI(settings)
 
     try:
-        plejd_site = api.get_site()
+        plejd_site = api.get_site(cache_file)
     except IncorrectCredentialsError:
         logging.critical("Failed to login to Plejd API, incorrect credentials in settings.json")
         raise
@@ -289,7 +293,7 @@ async def _load_plejd_site(settings: PlejdSettings) -> PlejdSite:
             retry_count = 0
             while True:
                 try:
-                    return api.get_site()
+                    return api.get_site(cache_file)
                 except PlejdAPIError as err:
                     logging.error(f"Failed to login to Plejd API: {str(err)})")
                     retry_count += 1

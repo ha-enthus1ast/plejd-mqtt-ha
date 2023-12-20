@@ -145,11 +145,16 @@ class PlejdAPI:
 
         self._session_token = response_json["sessionToken"]
 
-    def get_site(self) -> PlejdSite:
+    def get_site(self, cache_file: str) -> PlejdSite:
         """Get plejd site.
 
         If no site name in settings, it will take the first site in the list. Also responsible for
         logging in to the API if not already logged in.
+
+        Parameters
+        ----------
+        cache_file : str
+            File path for cached site
 
         Returns
         -------
@@ -172,7 +177,7 @@ class PlejdAPI:
             # Fetch from cache if exists, otherwise use cache
             logging.info("Fetching site from cache if possible, otherwise using API")
             try:
-                plejd_site = self._get_site_from_cache()
+                plejd_site = self._get_site_from_cache(cache_file)
             except CacheFileError as err:
                 logging.warning(f"Failed to get site from cache: {str(err)}")
                 logging.info("Fetching site from Plejd API")
@@ -199,22 +204,27 @@ class PlejdAPI:
                 logging.warning(f"Failed to get site from API: {str(err)}")
                 logging.info("Fetching site from cache")
                 try:
-                    plejd_site = self._get_site_from_cache()
+                    plejd_site = self._get_site_from_cache(cache_file)
                 except CacheFileError as err:
                     logging.error(f"Failed to get site from cache: {str(err)}")
                     raise
 
         return plejd_site
 
-    def _get_site_from_cache(self) -> PlejdSite:
+    def _get_site_from_cache(self, cache_file: str) -> PlejdSite:
         """Get site from cache.
+
+        Parameters
+        ----------
+        cache_file : str
+            File path for cached site
 
         Returns
         -------
         PlejdSite
             Plejd site
         """
-        json_site = self._get_json_site_from_cache()
+        json_site = self._get_json_site_from_cache(cache_file)
 
         plejd_site = PlejdSite(
             name=json_site["site"]["title"],
@@ -370,8 +380,13 @@ class PlejdAPI:
 
         return response_json["result"]
 
-    def _get_json_site_from_cache(self) -> dict:
+    def _get_json_site_from_cache(self, cache_file: str) -> dict:
         """Get site from cache.
+
+        Parameters
+        ----------
+        cache_file : str
+            File path for cached site
 
         Returns
         -------
@@ -379,7 +394,7 @@ class PlejdAPI:
             JSON content of the site
         """
         try:
-            with open(self._settings.cache_dir + self._settings.cache_file, "r") as file:
+            with open(cache_file, "r") as file:
                 json_site = json.load(file)
             logging.info("Loaded site from cache")
         except (FileNotFoundError, IsADirectoryError, PermissionError, IOError) as err:

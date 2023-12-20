@@ -148,15 +148,13 @@ Configuration of the application. See example configuration [here](#example).
 
 ### API
 
-| Parameter                 | Description                    | Default                    |
-|---------------------------|--------------------------------|----------------------------|
-| `user`                    | Plejd user name (email)        |                            |
-| `password`                | Password of the Plejd user     |                            |
-| `site` (Optional)         | Name of the Plejd site to use  | First in the accounts list |
-| `timeout` (Optional)      | Timeout to reach Plejd API     | 10.0                       |
-| `cache_policy` (Optional) | Cache policy to use            | "FIRST_CACHE"              |
-| `cache_dir` (Optional)    | Directory to store cached site | "~/.plejd/"                |
-| `cache_file` (Optional)   | File name for cached site      | "site.json"                |
+| Parameter                 | Description                   | Default                    |
+|---------------------------|-------------------------------|----------------------------|
+| `user`                    | Plejd user name (email)       |                            |
+| `password`                | Password of the Plejd user    |                            |
+| `site` (Optional)         | Name of the Plejd site to use | First in the accounts list |
+| `timeout` (Optional)      | Timeout to reach Plejd API    | 10.0                       |
+| `cache_policy` (Optional) | Cache policy to use           | "FIRST_CACHE"              |
 
 ### MQTT
 
