@@ -19,7 +19,7 @@ pydantic = "^1.10.13"               # Data validation
 ntplib = "^0.4.0"                   # To get time from an NTP server
 
 [tool.poetry.group.dev.dependencies]
-mypy = "^1.5.1"                     # Type checking
+mypy = "^1.8.0"                     # Type checking
 pylint = "^3.0.3"                  # Linting
 pycodestyle = "^2.11.0"             # Code style
 pytest = "^7.4.3"                   # Tests
