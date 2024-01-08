@@ -9,7 +9,7 @@ packages = [{include = "plejd_mqtt_ha"}]
 [tool.poetry.dependencies]
 python = ">=3.11.0,<3.13"           # Bleak requires version < 3.13
 paho-mqtt = "^1.6.1"                # MQTT library
-ha-mqtt-discoverable = "^0.13.0"    # Create MQTT entities that are discovered by HA
+ha-mqtt-discoverable = "^0.13.1"    # Create MQTT entities that are discovered by HA
 bleak = "^0.21.1"                   # BLE library
 requests = "^2.31.0"                # To communicate with plejd API
 tomli = "^2.0.1"                    # TOML parser to store plejd site
