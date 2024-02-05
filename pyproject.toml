@@ -14,7 +14,7 @@ bleak = "^0.21.1"                   # BLE library
 requests = "^2.31.0"                # To communicate with plejd API
 tomli = "^2.0.1"                    # TOML parser to store plejd site
 numpy = "^1.25.2"                   # To parse BLE payload, could probably be done without numpy
-cryptography = "^41.0.5"            # Used to create AES cipher to authenticate against plejd mesh
+cryptography = "^42.0.2"            # Used to create AES cipher to authenticate against plejd mesh
 pydantic = "^1.10.13"               # Data validation
 ntplib = "^0.4.0"                   # To get time from an NTP server
 
